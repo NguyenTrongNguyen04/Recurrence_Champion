@@ -609,6 +609,12 @@ const AnalyzePage = () => {
                                     let originalCode = '';
                                     let language = 'unknown';
                                     
+                                    // Ưu tiên 1: Lấy từ sessionStorage (đã lưu ở HomePage)
+                                    const savedOriginalCode = sessionStorage.getItem('originalCode');
+                                    if (savedOriginalCode) {
+                                        originalCode = savedOriginalCode;
+                                    }
+                                    
                                     if (analysisData) {
                                         try {
                                             const parsed = JSON.parse(analysisData);
@@ -622,14 +628,28 @@ const AnalyzePage = () => {
                                                 language = parsed.summary.detected_languages[0];
                                             }
                                             
-                                            // Try to get original code từ analysis context (nếu có)
-                                            // Hoặc từ github_data/files
-                                            if (parsed.github_data?.files) {
-                                                // Combine code từ GitHub files
-                                                originalCode = parsed.github_data.files
-                                                    .map((f: any) => f.content || '')
-                                                    .filter((c: string) => c.length > 0)
-                                                    .join('\n\n');
+                                            // Nếu chưa có original code từ sessionStorage, thử lấy từ các nguồn khác
+                                            if (!originalCode) {
+                                                // Ưu tiên 2: Từ github_data/files (GitHub mode)
+                                                if (parsed.github_data?.files) {
+                                                    originalCode = parsed.github_data.files
+                                                        .map((f: any) => f.content || '')
+                                                        .filter((c: string) => c.length > 0)
+                                                        .join('\n\n');
+                                                }
+                                                // Ưu tiên 3: Từ analysis.context.code (nếu backend trả về)
+                                                else if (parsed.analysis?.context?.code) {
+                                                    originalCode = parsed.analysis.context.code;
+                                                }
+                                                // Ưu tiên 4: Từ workflow_results (nếu có)
+                                                else if (parsed.analysis?.workflow_results) {
+                                                    for (const result of parsed.analysis.workflow_results) {
+                                                        if (result.result?.context?.code) {
+                                                            originalCode = result.result.context.code;
+                                                            break;
+                                                        }
+                                                    }
+                                                }
                                             }
                                         } catch (e) {
                                             console.error('Error parsing analysis data:', e);
