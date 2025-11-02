@@ -1,5 +1,6 @@
 import { initializeApp, getApps, FirebaseApp } from 'firebase/app';
 import { getAuth, Auth } from 'firebase/auth';
+import { getFirestore, Firestore } from 'firebase/firestore';
 
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
@@ -20,5 +21,9 @@ if (getApps().length === 0) {
 
 // Initialize Firebase Authentication and get a reference to the service
 export const auth: Auth = getAuth(app);
+
+// Initialize Firestore and get a reference to the service
+export const db: Firestore = getFirestore(app);
+
 export default app;
 

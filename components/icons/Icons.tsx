@@ -32,6 +32,7 @@ import {
   AlertCircle,
   MessageCircle,
   Send,
+  Trash2,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -75,6 +76,7 @@ export const AlertTriangleIcon = createIconComponent(AlertTriangle);
 export const ExclamationCircleIcon = createIconComponent(AlertCircle);
 export const ChatBubbleIcon = createIconComponent(MessageCircle);
 export const SendIcon = createIconComponent(Send);
+export const TrashIcon = createIconComponent(Trash2);
 
 // TestFlowLogo giữ nguyên (custom component)
 export const TestFlowLogo = () => {

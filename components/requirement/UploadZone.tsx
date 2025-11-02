@@ -3,6 +3,8 @@ import { UploadIcon, XIcon, DocumentTextIcon } from '../icons/Icons';
 
 interface UploadZoneProps {
   file: File | null;
+  documentName?: string; // Document name from saved session
+  documentSize?: number; // Document size from saved session
   onFileSelect: (file: File) => void;
   onFileRemove: () => void;
   acceptedTypes?: string[];
@@ -12,6 +14,8 @@ interface UploadZoneProps {
 
 const UploadZone: React.FC<UploadZoneProps> = ({
   file,
+  documentName,
+  documentSize,
   onFileSelect,
   onFileRemove,
   acceptedTypes = ['.docx', '.md', '.txt'], // PDF temporarily disabled
@@ -98,15 +102,21 @@ const UploadZone: React.FC<UploadZoneProps> = ({
     return (bytes / 1024 / 1024).toFixed(2) + ' MB';
   };
 
-  if (file) {
+  // Show file/document info if file exists or document info is available (from saved session)
+  const displayName = file?.name || documentName;
+  const displaySize = file?.size || documentSize;
+
+  if (displayName) {
     return (
       <div className="bg-surface2 rounded-lg p-4 border border-surface2">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3 flex-1 min-w-0">
             <DocumentTextIcon className="w-8 h-8 text-accent-cyan flex-shrink-0" />
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-primary truncate">{file.name}</p>
-              <p className="text-xs text-primary-muted">{formatFileSize(file.size)}</p>
+              <p className="text-sm font-medium text-primary truncate">{displayName}</p>
+              {displaySize && (
+                <p className="text-xs text-primary-muted">{formatFileSize(displaySize)}</p>
+              )}
             </div>
           </div>
           {!disabled && (

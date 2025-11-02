@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Card from '../components/ui/Card';
 import Button from '../components/ui/Button';
 import ProgressBar from '../components/ui/ProgressBar';
@@ -11,10 +11,13 @@ import { SparklesIcon, DocumentArrowDownIcon, CheckCircleIcon } from '../compone
 import type { RequirementDocument, RequirementAnalysis, TestCaseSuggestion } from '../types';
 import { parseDocument, preprocessText } from '../utils/documentParser';
 import { analyzeDocument, aiService } from '../services/aiService';
+import { useAuth } from '../contexts/AuthContext';
+import { saveAnalysis } from '../services/analysisService';
 
 type ProcessingStatus = 'idle' | 'parsing' | 'analyzing' | 'completed';
 
 const RequirementPage = () => {
+  const { currentUser } = useAuth();
   const [file, setFile] = useState<File | null>(null);
   const [document, setDocument] = useState<RequirementDocument | null>(null);
   const [analysis, setAnalysis] = useState<RequirementAnalysis | null>(null);
@@ -25,13 +28,72 @@ const RequirementPage = () => {
   const [isGeneratingTests, setIsGeneratingTests] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Load saved session from localStorage on mount
+  useEffect(() => {
+    try {
+      const savedDocument = localStorage.getItem('requirement_document');
+      const savedAnalysis = localStorage.getItem('requirement_analysis');
+      const savedTestCases = localStorage.getItem('requirement_testcases');
+
+      if (savedDocument) {
+        const doc = JSON.parse(savedDocument);
+        console.log('Loading saved document:', doc.fileName);
+        setDocument(doc);
+      }
+
+      if (savedAnalysis) {
+        const analysis = JSON.parse(savedAnalysis);
+        console.log('Loading saved analysis:', analysis.documentId);
+        setAnalysis(analysis);
+      }
+
+      if (savedTestCases) {
+        const testCases = JSON.parse(savedTestCases);
+        console.log('Loading saved test cases:', testCases.length);
+        setTestCases(testCases);
+      }
+    } catch (err) {
+      console.error('Error loading saved session:', err);
+    }
+  }, []);
+
+  // Save to localStorage whenever analysis or document changes
+  useEffect(() => {
+    if (document) {
+      localStorage.setItem('requirement_document', JSON.stringify(document));
+    } else {
+      localStorage.removeItem('requirement_document');
+    }
+  }, [document]);
+
+  useEffect(() => {
+    if (analysis) {
+      localStorage.setItem('requirement_analysis', JSON.stringify(analysis));
+    } else {
+      localStorage.removeItem('requirement_analysis');
+    }
+  }, [analysis]);
+
+  useEffect(() => {
+    if (testCases.length > 0) {
+      localStorage.setItem('requirement_testcases', JSON.stringify(testCases));
+    } else {
+      localStorage.removeItem('requirement_testcases');
+    }
+  }, [testCases]);
+
   const handleFileSelect = async (selectedFile: File) => {
     setFile(selectedFile);
     setError(null);
     setAnalysis(null);
+    setTestCases([]); // Clear test cases when selecting new file
     setProcessingStatus('parsing');
     setProgress(0);
     setStatusMessage(' Đã nhận yêu cầu của bạn! Đang xử lý document...');
+    
+    // Clear previous analysis from localStorage when selecting new file
+    localStorage.removeItem('requirement_analysis');
+    localStorage.removeItem('requirement_testcases');
 
     try {
       // Simulate progress for parsing
@@ -68,6 +130,10 @@ const RequirementPage = () => {
     setAnalysis(null);
     setTestCases([]);
     setError(null);
+    // Clear localStorage when file is removed
+    localStorage.removeItem('requirement_document');
+    localStorage.removeItem('requirement_analysis');
+    localStorage.removeItem('requirement_testcases');
   };
 
   const handleGenerateTestCases = async () => {
@@ -214,8 +280,8 @@ ${analysis.conflicts.length === 0 ? 'No conflicts detected.' : analysis.conflict
       setStatusMessage(' AI đang phân tích yêu cầu và đánh giá chất lượng...');
       setProgress(50);
       
-      // Analyze with AI (default to auto model selection)
-      const result = await analyzeDocument(processedText, 'auto');
+      // Analyze with Gemini AI
+      const result = await analyzeDocument(processedText, 'gemini');
       
       // Step 4: Finalizing
       setProgress(90);
@@ -224,6 +290,17 @@ ${analysis.conflicts.length === 0 ? 'No conflicts detected.' : analysis.conflict
       
       setAnalysis(result);
       setTestCases([]); // Reset test cases when new analysis
+      
+      // Auto-save to Firebase if user is logged in
+      if (currentUser && document) {
+        try {
+          await saveAnalysis(currentUser.uid, result, document);
+          console.log('Analysis saved to Firebase successfully');
+        } catch (saveError) {
+          console.error('Failed to save analysis to Firebase:', saveError);
+          // Don't throw - analysis is still successful, saving is optional
+        }
+      }
       
       // Step 5: Complete
       setProgress(100);
@@ -261,6 +338,8 @@ ${analysis.conflicts.length === 0 ? 'No conflicts detected.' : analysis.conflict
         <h2 className="text-xl font-semibold text-primary mb-4">Upload Document</h2>
         <UploadZone
           file={file}
+          documentName={document?.fileName}
+          documentSize={document?.size}
           onFileSelect={handleFileSelect}
           onFileRemove={handleFileRemove}
           disabled={processingStatus === 'parsing' || processingStatus === 'analyzing'}
