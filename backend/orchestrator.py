@@ -91,6 +91,7 @@ class Orchestrator:
             if agent_name == "ai_analysis_agent" and context and context.get("source") in ["uploaded_files", "code_snippet", "github"]:
                 # Extract code từ context trước (code thực sự), sau đó mới từ step_input hoặc user_request
                 code = context.get("code") or step_input.get("code") or user_request
+                original_code = context.get("code")  # Original code để agent đọc và detect language
                 if code and len(code) > 100:  # Nếu có code thực sự
                     language = context.get("detected_languages", ["unknown"])
                     if isinstance(language, list) and len(language) > 0:
@@ -100,16 +101,27 @@ class Orchestrator:
                     
                     # Giới hạn code để tránh quá dài
                     code_to_use = code[:10000] if isinstance(code, str) else str(code)[:10000]
+                    original_code_to_use = original_code[:15000] if original_code and isinstance(original_code, str) else None
                     
                     agent_task = {
                         "action": "analyze_code",
                         "code": code_to_use,
-                        "language": language,
+                        "original_code": original_code_to_use,  # Truyền original_code để agent tự detect language
+                        "language": language,  # Language hint (có thể không chính xác)
                         "context": context
                     }
-                    print(f"[DEBUG orchestrator] Override agent_task for ai_analysis_agent: action=analyze_code, language={language}, code_length={len(code_to_use)}")
+                    print(f"[DEBUG orchestrator] Override agent_task for ai_analysis_agent: action=analyze_code, language={language}, code_length={len(code_to_use)}, original_code_length={len(original_code_to_use) if original_code_to_use else 0}")
             
             agent_result = agent.process(agent_task)
+            
+            # Log response từ agent
+            print(f"[DEBUG orchestrator] Agent '{agent_name}' response keys: {list(agent_result.keys()) if isinstance(agent_result, dict) else 'not dict'}")
+            import json
+            # Log một phần response để tránh quá dài
+            if isinstance(agent_result, dict):
+                response_preview = {k: v for k, v in list(agent_result.items())[:10]}
+                print(f"[DEBUG orchestrator] Agent '{agent_name}' response preview: {json.dumps(response_preview, indent=2, default=str)[:1500]}")
+            
             results.append({
                 "step": agent_name,
                 "task": task,
@@ -177,6 +189,11 @@ class Orchestrator:
                     print(f"[DEBUG orchestrator] Direct call: code_length={len(code_to_use)}, language={language}")
                     ai_result = ai_agent.process(ai_task)
                     print(f"[DEBUG orchestrator] Direct AI call result keys: {ai_result.keys() if isinstance(ai_result, dict) else 'not dict'}")
+                    import json
+                    # Log preview của direct call result
+                    if isinstance(ai_result, dict):
+                        preview = {k: v for k, v in list(ai_result.items())[:10]}
+                        print(f"[DEBUG orchestrator] Direct AI call result preview: {json.dumps(preview, indent=2, default=str)[:1500]}")
                     if ai_result.get("success"):
                         previous_output = ai_result
                         # Extract parsed result

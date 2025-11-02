@@ -52,6 +52,17 @@ const HomePage = () => {
             sessionStorage.setItem('analysisResult', JSON.stringify(data));
             sessionStorage.setItem('analysisType', 'github');
             
+            // Lưu original code từ GitHub files (nếu có) để execution agent sử dụng
+            if (data.github_data?.files) {
+                const originalCode = data.github_data.files
+                    .map((f: any) => f.content || '')
+                    .filter((c: string) => c.length > 0)
+                    .join('\n\n');
+                if (originalCode) {
+                    sessionStorage.setItem('originalCode', originalCode.substring(0, 50000)); // Limit size
+                }
+            }
+            
             navigate('/analyze');
         } catch (err) {
             setError(err instanceof Error ? err.message : 'Có lỗi xảy ra khi phân tích');
@@ -94,6 +105,8 @@ const HomePage = () => {
             // Lưu kết quả vào sessionStorage
             sessionStorage.setItem('analysisResult', JSON.stringify(data));
             sessionStorage.setItem('analysisType', 'code');
+            // Lưu original code snippet để execution agent sử dụng
+            sessionStorage.setItem('originalCode', codeSnippet.substring(0, 50000)); // Limit size
             
             navigate('/analyze');
         } catch (err) {
@@ -121,6 +134,18 @@ const HomePage = () => {
                 formData.append('files', file);
             });
 
+            // Đọc file contents để lưu vào sessionStorage cho execution agent
+            const fileContents: string[] = [];
+            for (const file of files) {
+                try {
+                    const content = await file.text();
+                    fileContents.push(`// File: ${file.name}\n${content}`);
+                } catch (err) {
+                    console.warn(`Could not read file ${file.name}:`, err);
+                }
+            }
+            const combinedCode = fileContents.join('\n\n');
+
             const response = await fetch(API_ENDPOINTS.ANALYZE_FILES, {
                 method: 'POST',
                 body: formData,
@@ -136,6 +161,8 @@ const HomePage = () => {
             // Lưu kết quả vào sessionStorage
             sessionStorage.setItem('analysisResult', JSON.stringify(data));
             sessionStorage.setItem('analysisType', 'files');
+            // Lưu original code từ files để execution agent sử dụng
+            sessionStorage.setItem('originalCode', combinedCode.substring(0, 50000)); // Limit size
             
             navigate('/analyze');
         } catch (err) {

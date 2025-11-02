@@ -24,6 +24,22 @@ interface AnalysisResult {
         final_output?: any;
     };
     parsed_response?: {
+        detectedLanguage?: string;
+        result?: {
+            detectedLanguage?: string;
+            summary?: {
+                overview?: string;
+                risks?: string[];
+            };
+            testCases?: Array<{
+                id?: number;
+                title?: string;
+                name?: string;
+                function?: string;
+                type?: string;
+                complexity?: string;
+            }>;
+        };
         summary?: {
             overview?: string;
             risks?: string[];
@@ -345,6 +361,37 @@ const AnalyzePage = () => {
             const files: string[] = [];
             const detectedTech: string[] = [];
             
+            // Ưu tiên 1: Lấy từ AI Analysis Agent (detectedLanguage từ parsed_response)
+            // Đây là ngôn ngữ agent đã tự detect từ code, chính xác nhất
+            if (result.parsed_response?.result?.detectedLanguage) {
+                const aiDetectedLang = result.parsed_response.result.detectedLanguage;
+                if (aiDetectedLang && aiDetectedLang !== "unknown") {
+                    detectedTech.push(aiDetectedLang);
+                }
+            }
+            // Ưu tiên 2: Lấy từ parsed_response.detectedLanguage (top level)
+            else if (result.parsed_response?.detectedLanguage) {
+                const aiDetectedLang = result.parsed_response.detectedLanguage;
+                if (aiDetectedLang && aiDetectedLang !== "unknown") {
+                    detectedTech.push(aiDetectedLang);
+                }
+            }
+            
+            // Fallback: Lấy từ summary.detected_languages hoặc files_info (có thể không chính xác)
+            if (detectedTech.length === 0) {
+                if (result.summary?.detected_languages) {
+                    detectedTech.push(...result.summary.detected_languages);
+                }
+                
+                if (result.files_info) {
+                    result.files_info.forEach(file => {
+                        if (file.language && !detectedTech.includes(file.language)) {
+                            detectedTech.push(file.language);
+                        }
+                    });
+                }
+            }
+            
             if (result.github_data?.files) {
                 result.github_data.files.forEach(file => {
                     if (file.path) {
@@ -353,17 +400,10 @@ const AnalyzePage = () => {
                 });
             }
             
-            if (result.summary?.detected_languages) {
-                detectedTech.push(...result.summary.detected_languages);
-            }
-            
             if (result.files_info) {
                 result.files_info.forEach(file => {
                     if (file.name) {
                         files.push(file.name);
-                    }
-                    if (file.language) {
-                        detectedTech.push(file.language);
                     }
                 });
             }
@@ -638,30 +678,110 @@ const AnalyzePage = () => {
                                     let originalCode = '';
                                     let language = 'unknown';
                                     
+                                    // Ưu tiên 1: Lấy từ sessionStorage (đã lưu ở HomePage)
+                                    const savedOriginalCode = sessionStorage.getItem('originalCode');
+                                    if (savedOriginalCode) {
+                                        originalCode = savedOriginalCode;
+                                    }
+                                    
                                     if (analysisData) {
                                         try {
                                             const parsed = JSON.parse(analysisData);
                                             
-                                            // Get language từ code_info hoặc files_info hoặc summary
-                                            if (parsed.code_info?.language) {
-                                                language = parsed.code_info.language;
-                                            } else if (parsed.files_info && parsed.files_info.length > 0) {
-                                                language = parsed.files_info[0].language || 'unknown';
-                                            } else if (parsed.summary?.detected_languages && parsed.summary.detected_languages.length > 0) {
-                                                language = parsed.summary.detected_languages[0];
-                                            }
+                                    // Ưu tiên 1: Lấy từ AI Analysis Agent (detectedLanguage - chính xác nhất)
+                                    if (parsed.parsed_response?.result?.detectedLanguage) {
+                                        language = parsed.parsed_response.result.detectedLanguage;
+                                    } else if (parsed.parsed_response?.detectedLanguage) {
+                                        language = parsed.parsed_response.detectedLanguage;
+                                    }
+                                    // Ưu tiên 2: Lấy từ code_info hoặc files_info hoặc summary (fallback)
+                                    else if (parsed.code_info?.language) {
+                                        language = parsed.code_info.language;
+                                    } else if (parsed.files_info && parsed.files_info.length > 0) {
+                                        language = parsed.files_info[0].language || 'unknown';
+                                    } else if (parsed.summary?.detected_languages && parsed.summary.detected_languages.length > 0) {
+                                        language = parsed.summary.detected_languages[0];
+                                    }
                                             
-                                            // Try to get original code từ analysis context (nếu có)
-                                            // Hoặc từ github_data/files
-                                            if (parsed.github_data?.files) {
-                                                // Combine code từ GitHub files
-                                                originalCode = parsed.github_data.files
-                                                    .map((f: any) => f.content || '')
-                                                    .filter((c: string) => c.length > 0)
-                                                    .join('\n\n');
+                                            // Nếu chưa có original code từ sessionStorage, thử lấy từ các nguồn khác
+                                            if (!originalCode) {
+                                                // Ưu tiên 2: Từ github_data/files (GitHub mode)
+                                                if (parsed.github_data?.files) {
+                                                    originalCode = parsed.github_data.files
+                                                        .map((f: any) => f.content || '')
+                                                        .filter((c: string) => c.length > 0)
+                                                        .join('\n\n');
+                                                }
+                                                // Ưu tiên 3: Từ analysis.context.code (nếu backend trả về)
+                                                else if (parsed.analysis?.context?.code) {
+                                                    originalCode = parsed.analysis.context.code;
+                                                }
+                                                // Ưu tiên 4: Từ workflow_results (nếu có)
+                                                else if (parsed.analysis?.workflow_results) {
+                                                    for (const result of parsed.analysis.workflow_results) {
+                                                        if (result.result?.context?.code) {
+                                                            originalCode = result.result.context.code;
+                                                            break;
+                                                        }
+                                                    }
+                                                }
                                             }
                                         } catch (e) {
                                             console.error('Error parsing analysis data:', e);
+                                        }
+                                    }
+                                    
+                                    // Lấy generated unit test code từ analysis result (nếu có)
+                                    let generatedUnitTestCode = '';
+                                    let unitTestFramework = '';
+                                    let unitTestCases: SuggestedTest[] = [];
+                                    
+                                    if (analysisData) {
+                                        try {
+                                            const parsed = JSON.parse(analysisData);
+                                            
+                                            // Lấy từ ai_analysis_agent result
+                                            if (parsed.analysis?.workflow_results) {
+                                                for (const workflowResult of parsed.analysis.workflow_results) {
+                                                    if (workflowResult.step === 'ai_analysis_agent' || workflowResult.agent === 'ai_analysis_agent') {
+                                                        const agentResult = workflowResult.result || workflowResult;
+                                                        if (agentResult.generatedUnitTestCode) {
+                                                            generatedUnitTestCode = agentResult.generatedUnitTestCode;
+                                                            unitTestFramework = agentResult.unitTestFramework || '';
+                                                            // Lấy unit test cases nếu có
+                                                            if (agentResult.unitTestCases && Array.isArray(agentResult.unitTestCases)) {
+                                                                unitTestCases = agentResult.unitTestCases.map((tc: any) => ({
+                                                                    id: tc.id || 0,
+                                                                    name: tc.name || tc.title || '',
+                                                                    function: tc.function || '',
+                                                                    type: (tc.type || 'unit') as 'unit' | 'integration' | 'negative' | 'edge',
+                                                                    complexity: (tc.complexity || 'M') as 'S' | 'M' | 'L',
+                                                                    selected: selectedTests.some(st => st.id === tc.id || st.name === (tc.name || tc.title))
+                                                                }));
+                                                            }
+                                                            break;
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                            
+                                            // Hoặc lấy từ parsed_response trực tiếp
+                                            if (!generatedUnitTestCode && parsed.parsed_response?.generatedUnitTestCode) {
+                                                generatedUnitTestCode = parsed.parsed_response.generatedUnitTestCode;
+                                                unitTestFramework = parsed.parsed_response.unitTestFramework || '';
+                                                if (parsed.parsed_response.unitTestCases) {
+                                                    unitTestCases = parsed.parsed_response.unitTestCases.map((tc: any) => ({
+                                                        id: tc.id || 0,
+                                                        name: tc.name || tc.title || '',
+                                                        function: tc.function || '',
+                                                        type: (tc.type || 'unit') as 'unit' | 'integration' | 'negative' | 'edge',
+                                                        complexity: (tc.complexity || 'M') as 'S' | 'M' | 'L',
+                                                        selected: selectedTests.some(st => st.id === tc.id || st.name === (tc.name || tc.title))
+                                                    }));
+                                                }
+                                            }
+                                        } catch (e) {
+                                            console.error('Error extracting generated unit test code:', e);
                                         }
                                     }
                                     
@@ -671,7 +791,11 @@ const AnalyzePage = () => {
                                         original_code: originalCode.substring(0, 50000), // Limit size
                                         language: language,
                                         test_cases: selectedTests,
-                                        risks: aiSummary.risks || [] // Lưu risks từ analysis
+                                        risks: aiSummary.risks || [], // Lưu risks từ analysis
+                                        // Lưu generated unit test code từ AI Analysis Agent
+                                        generated_unit_test_code: generatedUnitTestCode,
+                                        unit_test_framework: unitTestFramework,
+                                        unit_test_cases: unitTestCases
                                     }));
                                     
                                     navigate('/runs');

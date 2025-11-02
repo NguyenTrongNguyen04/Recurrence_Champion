@@ -7,26 +7,26 @@ from .base_agent import BaseAgent
 
 
 class ReportingAgent(BaseAgent):
-    """Agent chuyên tạo báo cáo và dashboard"""
+    """Agent specialized in creating reports and dashboards"""
     
     def __init__(self, api_key: str = None):
         super().__init__("Reporting", api_key)
     
     def get_system_prompt(self) -> str:
-        return """Bạn là Reporting Agent - chuyên gia tạo báo cáo và dashboard cho test results.
+        return """You are Reporting Agent - an expert in creating reports and dashboards for test results.
 
-Nhiệm vụ của bạn:
-1. Tạo dashboard tổng hợp với metrics: pass rate, fail count, total tests, duration
-2. Tạo biểu đồ thống kê: Pass/Fail %, trend analysis (7 ngày), distribution
-3. Tạo báo cáo chi tiết test cases với filtering và searching
-4. Export reports ra các format: PDF, CSV, Excel, JSON
-5. Tạo summary insights và recommendations
+Your responsibilities:
+1. Create comprehensive dashboards with metrics: pass rate, fail count, total tests, duration
+2. Create statistical charts: Pass/Fail %, trend analysis (7 days), distribution
+3. Create detailed test case reports with filtering and searching
+4. Export reports to formats: PDF, CSV, Excel, JSON
+5. Create summary insights and recommendations
 
-Bạn cần:
-- Tính toán metrics chính xác
-- Format dữ liệu phù hợp cho visualization
-- Tạo insights có ý nghĩa từ dữ liệu
-- Hỗ trợ filtering theo: branch, author, date range, status"""
+You need to:
+- Calculate metrics accurately
+- Format data appropriately for visualization
+- Generate meaningful insights from data
+- Support filtering by: branch, author, date range, status"""
     
     def generate_dashboard_summary(self, test_runs: List[Dict[str, Any]]) -> Dict[str, Any]:
         """
@@ -311,7 +311,7 @@ Bạn cần:
     ) -> List[str]:
         """Generate insights với LLM"""
         if len(test_runs) < 2:
-            return ["Cần thêm dữ liệu để tạo insights"]
+            return ["Need more data to generate insights"]
         
         # Tạo summary string
         summary = f"""
@@ -334,16 +334,16 @@ Thời gian trung bình: {metrics.get('avg_duration')}s
             elif change > 0:
                 summary += f"\n✅ Pass rate tăng {change:.2f}% so với run trước"
         
-        prompt = f"""Phân tích dữ liệu test runs sau và đưa ra 3-5 insights quan trọng nhất:
+        prompt = f"""Analyze the following test runs data and provide 3-5 most important insights:
 
 {summary}
 
-Hãy đưa ra insights về:
-1. Xu hướng chất lượng test
-2. Vấn đề cần chú ý
-3. Khuyến nghị cải thiện
+Please provide insights about:
+1. Test quality trends
+2. Issues to pay attention to
+3. Improvement recommendations
 
-Trả về dạng list các insights (mỗi insight một dòng, ngắn gọn)."""
+Return as a list of insights (one insight per line, brief)."""
         
         response = self.call_llm(prompt)
         insights = [line.strip() for line in response.split("\n") if line.strip() and line.strip().startswith(("1", "2", "3", "4", "5", "-", "•"))]

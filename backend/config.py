@@ -18,7 +18,7 @@ class Config:
     )
     
     # Model
-    CEREBRAS_MODEL: str = "qwen-3-coder-480b"
+    CEREBRAS_MODEL: str = "gpt-oss-120b"
     
     # API Server
     API_HOST: str = os.environ.get("API_HOST", "0.0.0.0")
