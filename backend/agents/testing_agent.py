@@ -8,22 +8,22 @@ from .base_agent import BaseAgent
 
 
 class TestingAgent(BaseAgent):
-    """Agent chuyên xử lý test results files"""
+    """Agent specialized in processing test results files"""
     
     def __init__(self, api_key: str = None):
         super().__init__("Testing", api_key)
     
     def get_system_prompt(self) -> str:
-        return """Bạn là Testing Agent - chuyên gia trong việc xử lý và phân tích file kết quả test.
+        return """You are Testing Agent - an expert in processing and analyzing test result files.
 
-Nhiệm vụ của bạn:
-1. Parse các định dạng test results: JUnit XML, JSON (Playwright, Cypress, Jest), PyTest, Mocha...
-2. Extract thông tin quan trọng: test name, status (pass/fail/skip), duration, error messages, stack traces
-3. Chuẩn hóa dữ liệu về format thống nhất
-4. Validate và kiểm tra tính hợp lệ của file
-5. Phân loại test cases theo category (unit, integration, e2e...)
+Your responsibilities:
+1. Parse test result formats: JUnit XML, JSON (Playwright, Cypress, Jest), PyTest, Mocha...
+2. Extract important information: test name, status (pass/fail/skip), duration, error messages, stack traces
+3. Normalize data to a unified format
+4. Validate and check file validity
+5. Classify test cases by category (unit, integration, e2e...)
 
-Output format mong muốn:
+Desired output format:
 {
   "total": number,
   "passed": number,
@@ -268,11 +268,11 @@ Output format mong muốn:
                 result = {"error": "Failed to parse Jest JSON"}
         elif file_format == "generic_json":
             # Use LLM to parse generic JSON
-            prompt = f"""Parse test results từ JSON này và extract thông tin test cases:
+            prompt = f"""Parse test results from this JSON and extract test case information:
 
-{file_content[:2000]}  # Limit content để tránh token limit
+{file_content[:2000]}  # Limit content to avoid token limit
 
-Trả về JSON với format chuẩn như đã mô tả trong system prompt."""
+Return JSON with the standard format as described in the system prompt."""
             llm_result = self.call_llm(prompt)
             try:
                 result = json.loads(llm_result)

@@ -3,55 +3,91 @@ AI Analysis Agent - Phân tích lỗi tự động với AI, tóm tắt và đ�
 """
 from typing import Dict, Any, List, Optional
 from collections import defaultdict
+from enum import Enum
 from .base_agent import BaseAgent
 
 
+class ProgrammingLanguage(str, Enum):
+    """Enum chứa các ngôn ngữ lập trình được hỗ trợ"""
+    PYTHON = "python"
+    JAVA = "java"
+    JAVASCRIPT = "javascript"
+    TYPESCRIPT = "typescript"
+    GO = "go"
+    RUST = "rust"
+    CPP = "cpp"
+    C = "c"
+    CSHARP = "csharp"
+    PHP = "php"
+    RUBY = "ruby"
+    SWIFT = "swift"
+    KOTLIN = "kotlin"
+    SCALA = "scala"
+    DART = "dart"
+    UNKNOWN = "unknown"
+    
+    @classmethod
+    def list_all(cls) -> List[str]:
+        """Trả về danh sách tất cả các ngôn ngữ"""
+        return [lang.value for lang in cls if lang != cls.UNKNOWN]
+
+
 class AIAnalysisAgent(BaseAgent):
-    """Agent chuyên phân tích lỗi với AI"""
+    """Agent specialized in error analysis with AI"""
     
     def __init__(self, api_key: str = None):
         super().__init__("AIAnalysis", api_key)
     
     def get_system_prompt(self) -> str:
-        return """Bạn là AI Analysis Agent - chuyên gia phân tích code và test errors.
+        return """You are AI Analysis Agent - an expert in analyzing code and test errors.
 
-Nhiệm vụ của bạn:
-1. **Phân tích code**: Phân tích cấu trúc code, logic, functions, classes
-   - Đề xuất test cases: unit tests, integration tests, edge cases, negative tests
-   - Xác định potential bugs, security issues
-   - Đề xuất improvements và best practices
+Your responsibilities:
+1. **Code Analysis**: Analyze code structure, logic, functions, classes
+   - AUTOMATICALLY DETERMINE programming language from provided code
+   - Suggest test cases: unit tests, integration tests, edge cases, negative tests
+   - Identify potential bugs, security issues
+   - Suggest improvements and best practices
    
-2. **Phân tích errors**: Phân tích error messages và stack traces
-   - Xác định nguyên nhân gốc rễ (root cause)
-   - Đưa ra gợi ý fix cụ thể
-   - Đánh giá severity (low/medium/high)
+2. **Error Analysis**: Analyze error messages and stack traces
+   - Identify root causes
+   - Provide specific fix suggestions
+   - Assess severity (low/medium/high)
 
-Khi phân tích code và đề xuất test cases, trả về JSON format:
+SUPPORTED PROGRAMMING LANGUAGES:
+""" + ", ".join(ProgrammingLanguage.list_all()) + """
+
+When analyzing code, you MUST:
+1. READ the provided code
+2. DETERMINE programming language from syntax, keywords, patterns in code
+3. SELECT language from the enum list above (or "unknown" if uncertain)
+4. Use the determined language to suggest appropriate test cases
+
+When analyzing code and suggesting test cases, return JSON format:
 {
   "summary": {
-    "overview": "Mô tả tổng quan về code",
+    "overview": "Overview description of the code",
     "risks": ["Risk 1", "Risk 2", ...]
   },
   "testCases": [
     {
       "id": 1,
-      "title": "Tên test case",
+      "title": "Test case name",
       "name": "Test case name",
-      "function": "Tên function/class cần test",
+      "function": "Function/class name to test",
       "type": "unit|integration|negative|edge",
       "complexity": "S|M|L",
-      "description": "Mô tả test case",
-      "steps": ["Bước 1", "Bước 2", ...],
-      "expectedResult": "Kết quả mong đợi"
+      "description": "Test case description",
+      "steps": ["Step 1", "Step 2", ...],
+      "expectedResult": "Expected result"
     }
   ]
 }
 
-Khi phân tích errors, trả về:
+When analyzing errors, return:
 {
   "name": "test case name",
-  "cause": "nguyên nhân ngắn gọn",
-  "suggestion": "hướng dẫn fix cụ thể",
+  "cause": "brief cause",
+  "suggestion": "specific fix instructions",
   "severity": "low|medium|high",
   "category": "type of error"
 }"""
@@ -72,7 +108,7 @@ Khi phân tích errors, trả về:
             stack_trace: Stack trace (optional)
             context: Context bổ sung (test code, environment, etc.)
         """
-        prompt = f"""Phân tích lỗi test sau và đưa ra phân tích chi tiết:
+        prompt = f"""Analyze the following test error and provide detailed analysis:
 
 Test Name: {test_name}
 
@@ -80,19 +116,19 @@ Error Message:
 {error_message}
 
 Stack Trace:
-{stack_trace or "Không có"}
+{stack_trace or "None"}
 
 Context:
-{context or "Không có"}
+{context or "None"}
 
-Hãy:
-1. Xác định nguyên nhân gốc rễ của lỗi
-2. Tóm tắt ngắn gọn (1-2 câu)
-3. Đưa ra gợi ý fix cụ thể, có thể là nhiều bước
-4. Đánh giá severity (low/medium/high)
-5. Phân loại loại lỗi (assertion, timeout, network, authentication, etc.)
+Please:
+1. Identify the root cause of the error
+2. Summarize briefly (1-2 sentences)
+3. Provide specific fix suggestions, which may be multi-step
+4. Assess severity (low/medium/high)
+5. Classify error type (assertion, timeout, network, authentication, etc.)
 
-Trả về JSON với format đã mô tả trong system prompt."""
+Return JSON with the format described in the system prompt."""
         
         response = self.call_llm(prompt)
         
@@ -184,7 +220,7 @@ Trả về JSON với format đã mô tả trong system prompt."""
         """
         if not error_analyses:
             return {
-                "summary": "Không có lỗi",
+                "summary": "No errors",
                 "total_errors": 0
             }
         
@@ -277,8 +313,8 @@ Trả về JSON với format đã mô tả trong system prompt."""
     ) -> str:
         """Generate summary text với LLM"""
         summary_data = f"""
-Tổng số lỗi: {len(analyses)}
-Phân bố theo severity: {groups.get('summary', {}).get('unique_patterns', 0)} patterns
+Total errors: {len(analyses)}
+Severity distribution: {groups.get('summary', {}).get('unique_patterns', 0)} patterns
 Flaky tests: {groups.get('summary', {}).get('flaky_count', 0)}
 
 Top 3 categories:
@@ -293,14 +329,14 @@ Top 3 categories:
         for category, items in top_categories:
             summary_data += f"- {category}: {len(items)} errors\n"
         
-        prompt = f"""Dựa trên dữ liệu sau, tạo một đoạn tóm tắt ngắn gọn (2-3 câu) về tình trạng lỗi:
+        prompt = f"""Based on the following data, create a brief summary (2-3 sentences) about the error situation:
 
 {summary_data}
 
-Tóm tắt cần:
-- Highlight vấn đề chính
-- Đề cập đến flaky tests nếu có
-- Gợi ý action items cần ưu tiên"""
+Summary should:
+- Highlight the main issues
+- Mention flaky tests if any
+- Suggest priority action items"""
         
         return self.call_llm(prompt)
     
@@ -316,14 +352,14 @@ Tóm tắt cần:
         flaky_count = groups.get("summary", {}).get("flaky_count", 0)
         if flaky_count > 0:
             recommendations.append(
-                f"Có {flaky_count} flaky test(s) cần được điều tra và fix"
+                f"There are {flaky_count} flaky test(s) that need investigation and fixing"
             )
         
         # Check severity distribution
         high_severity = sum(1 for a in analyses if a.get("severity") == "high")
         if high_severity > 0:
             recommendations.append(
-                f"Ưu tiên fix {high_severity} high severity error(s)"
+                f"Priority: fix {high_severity} high severity error(s)"
             )
         
         # Check for common patterns
@@ -332,7 +368,7 @@ Tóm tắt cần:
             top_pattern = max(by_pattern.items(), key=lambda x: len(x[1]))
             if len(top_pattern[1]) > 1:
                 recommendations.append(
-                    f"Nhận diện pattern '{top_pattern[0]}' xuất hiện {len(top_pattern[1])} lần - cần review systematic issue"
+                    f"Identified pattern '{top_pattern[0]}' appears {len(top_pattern[1])} times - need to review systematic issue"
                 )
         
         return recommendations
@@ -341,75 +377,152 @@ Tóm tắt cần:
         self,
         code: str,
         language: str = "unknown",
-        context: Optional[Dict[str, Any]] = None
+        context: Optional[Dict[str, Any]] = None,
+        original_code: Optional[str] = None
     ) -> Dict[str, Any]:
         """
         Phân tích code và đề xuất test cases
         
         Args:
             code: Code cần phân tích
-            language: Programming language
+            language: Programming language (có thể là "unknown" - agent sẽ tự detect)
             context: Context bổ sung
+            original_code: Original source code để agent đọc và xác định ngôn ngữ
         """
+        # Nếu có original_code, ưu tiên dùng nó để detect language
+        code_to_analyze = original_code if original_code else code
+        if not code_to_analyze:
+            code_to_analyze = code
+        
         # Language-specific instructions
         lang_instructions = ""
         if language.lower() == "java":
-            lang_instructions = """
-Đây là Java Spring code. Hãy đề xuất test cases cho:
-- Public methods trong service class
+                lang_instructions = """
+This is Java Spring code. Please suggest test cases for:
+- Public methods in service class
 - Repository interactions
 - Business logic validation
 - Exception handling
 - Security context (authentication)
 
-Ví dụ cho Java Spring service method:
+Example for Java Spring service method:
 - Test successful case: "bookmarkRoom_WhenValidInput_ReturnsBookmarkResponse"
 - Test negative case: "bookmarkRoom_WhenRoomNotFound_ThrowsAppException"
 - Test edge case: "bookmarkRoom_WhenAlreadyBookmarked_ThrowsAppException"
 """
         
-        prompt = f"""Phân tích đoạn code sau và đề xuất test cases:
+        prompt = f"""Analyze the following code and suggest test cases:
 
-Language: {language}
+IMPORTANT: You MUST read the provided code and AUTOMATICALLY DETERMINE the programming language.
+
+Available languages (ProgrammingLanguage enum):
+""" + ", ".join(ProgrammingLanguage.list_all()) + """, or "unknown" if uncertain.
+
+Language hint (may NOT be accurate - ignore if code doesn't match): {language}
 {lang_instructions}
 
-Code:
-{code[:10000]}  # Limit để tránh token limit
+Original Code (read and determine language from here - IMPORTANT: base only on ACTUAL SYNTAX, not comments):
+{code_to_analyze[:15000]}  # Limit to avoid token limit
 
-Hãy:
-1. Phân tích từng public method trong code
-2. Đề xuất test cases CỤ THỂ cho từng method: unit tests, integration tests, edge cases, negative tests
-3. Xác định potential bugs hoặc security issues
-4. Đề xuất improvements nếu có
+LANGUAGE DETECTION GUIDE (based on ACTUAL SYNTAX in code):
 
-QUAN TRỌNG: Trả về kết quả dưới dạng JSON với format sau (KHÔNG có markdown, chỉ JSON thuần):
+**PYTHON:**
+- Has `def` keyword to define functions
+- Has `class` keyword to define classes
+- Has `self` as first parameter in methods
+- Uses indentation instead of curly braces {{}}
+- No semicolons at end of lines
+- Example: `def add_product(self, product):`, `self.products = []`
+- Import: `from module import`, `import module`
+
+**JAVASCRIPT/TYPESCRIPT:**
+- Has `function` keyword or arrow function `() =>`
+- Has `class` keyword but methods don't have `self`
+- Uses curly braces {{}} and semicolons `;`
+- Example: `function addProduct(product) {{}}`, `const products = [];`
+- Import: `import ... from`, `require()`
+
+**JAVA:**
+- Has `public class`, `public void`, `private`, etc.
+- Has type declarations: `String name`, `int count`
+- Uses curly braces {{}} and semicolons `;`
+- Example: `public void addProduct(Product product) {{}}`
+- Import: `import java.util.*;`, `package com.example;`
+
+**GO:**
+- Has `func`, `package`, `import` keywords
+- No classes, uses structs and methods
+- Example: `func (p *ProductManager) AddProduct(product Product) {{}}`
+- Import: `import ("fmt")`
+
+**RUST:**
+- Has `fn`, `struct`, `impl` keywords
+- Example: `fn add_product(&mut self, product: Product) {{}}`
+- Import: `use std::collections::HashMap;`
+
+Please:
+1. **READ code carefully** and determine programming language from ACTUAL SYNTAX:
+   - Only look at SYNTAX (def/function/class/fn, self/no self, indentation/{{}}, etc.)
+   - IGNORE comments (comments may mention different languages but actual code is different)
+   - Note: Python code has `def` and `self` → definitely Python, not JavaScript
+   - Note: JavaScript code has `function` or `() =>` and curly braces → JavaScript
+2. **SELECT language** from enum above (or "unknown")
+3. **LIST ALL methods/functions** in the code (including __init__, public methods, private methods if visible)
+4. **FOR EACH method/function**, create AT LEAST 2-3 unit test cases (ONLY happy cases/positive scenarios):
+   - Create test cases for EVERY method you found in the code
+   - Each method should have multiple test cases covering different VALID/SUCCESS scenarios
+   - Focus on happy path: valid inputs, normal operations, expected successful results
+   - DO NOT create negative tests, edge cases, or error handling tests - ONLY positive/happy cases
+   - Examples of happy cases:
+     * Method with valid parameters that should succeed
+     * Different valid input combinations
+     * Successful operations and expected results
+   - If code has 5 methods, you should create at least 10-15 test cases total (2-3 happy cases per method)
+   - DO NOT stop at just 5 test cases - ensure EVERY method has happy case coverage
+5. Identify potential bugs or security issues
+6. Suggest improvements if any
+
+CRITICAL: You MUST create test cases for ALL methods/functions. Do not create only 5 test cases total. Each method needs multiple test cases.
+
+Code to analyze (if no Original Code above - but prefer Original Code):
+{code[:10000] if code else "N/A"}  # Limit to avoid token limit
+
+IMPORTANT: Return result as JSON with the following format (NO markdown, pure JSON only):
 {{
+  "detectedLanguage": "python|java|javascript|typescript|go|rust|cpp|c|csharp|php|ruby|swift|kotlin|scala|dart|unknown",
   "summary": {{
-    "overview": "Mô tả tổng quan về code (2-3 câu)",
+    "overview": "Overview description of code (2-3 sentences), including the determined language",
     "risks": ["Risk 1", "Risk 2", ...]
   }},
   "testCases": [
     {{
       "id": 1,
-      "title": "Tên test case cụ thể (ví dụ: bookmarkRoom_WhenValidInput_ReturnsBookmarkResponse)",
-      "name": "Tên test case (cùng với title)",
-      "function": "Tên method cần test (ví dụ: bookmarkRoom)",
-      "type": "unit|integration|negative|edge",
+      "title": "Specific test case name (e.g., bookmarkRoom_WhenValidInput_ReturnsBookmarkResponse)",
+      "name": "Test case name (same as title)",
+      "function": "Method name to test (e.g., bookmarkRoom)",
+      "type": "unit",
       "complexity": "S|M|L",
-      "description": "Mô tả test case",
-      "steps": ["Bước 1", "Bước 2", ...],
-      "expectedResult": "Kết quả mong đợi"
+      "description": "Test case description",
+      "steps": ["Step 1", "Step 2", ...],
+      "expectedResult": "Expected result"
     }}
   ]
 }}
 
-Lưu ý QUAN TRỌNG: 
-- testCases PHẢI là array với ít nhất 3-5 test cases
-- Mỗi test case PHẢI có title và name là STRING, KHÔNG phải object
-- title/name phải mô tả cụ thể test case (ví dụ: "bookmarkRoom_WhenRoomNotFound_ThrowsException")
-- function phải là tên method thực tế trong code (ví dụ: "bookmarkRoom", "unbookmarkRoom")
-- Ưu tiên test cases cho tất cả public methods trong code
-- KHÔNG trả về error analysis format, chỉ trả về test cases format"""
+IMPORTANT NOTES: 
+- testCases MUST be an array covering ALL methods/functions in the code
+- EACH method/function MUST have at least 2-3 test cases (ONLY happy cases/positive scenarios)
+- Total test cases should be: (number of methods) × (2-3 happy cases per method)
+- Example: If code has 6 methods (__init__, method1, method2, method3, method4, method5), create at least 12-18 happy case test cases
+- Each test case MUST be a HAPPY CASE/POSITIVE SCENARIO - test successful operations with valid inputs
+- Each test case MUST have title and name as STRING, NOT object
+- title/name must specifically describe the happy case (e.g., "addProduct_WhenValidProduct_AddsSuccessfully", "getProductById_WhenProductExists_ReturnsProduct")
+- function must be the actual method name in code (e.g., "add_product", "get_product_by_id")
+- ALL test cases MUST have type="unit" (ONLY unit tests)
+- ONLY create positive/happy test cases - DO NOT create negative tests, edge cases, error handling, or exception tests
+- Cover ALL public methods, private methods (if visible), and __init__ if applicable
+- Do NOT create only 5 test cases - create happy case test cases for EVERY method
+- Do NOT return error analysis format, only return test cases format"""
         
         response = self.call_llm(prompt, context)
         
@@ -436,13 +549,62 @@ Lưu ý QUAN TRỌNG:
                     import logging
                     logging.warning(f"No test cases found in AI response. Response preview: {response[:200]}")
                 
-                return {
+                # Extract detected language từ parsed result
+                detected_language = parsed.get("detectedLanguage", language)
+                
+                # Sau khi analyze xong, tự động generate test code cho unit tests
+                # Filter to only unit test cases
+                unit_test_cases = [tc for tc in test_cases if tc.get("type", "").lower() == 'unit']
+                
+                # If no unit tests found, try to convert all to unit tests
+                if not unit_test_cases and test_cases:
+                    print(f"[WARNING ai_analysis_agent] No unit test cases found, converting all {len(test_cases)} test cases to unit type")
+                    for tc in test_cases:
+                        tc["type"] = "unit"
+                    unit_test_cases = test_cases
+                generated_test_code = None
+                detected_framework = None
+                
+                if unit_test_cases and detected_language and detected_language != "unknown":
+                    # Generate test code cho unit tests
+                    try:
+                        generate_result = self.generate_test_code(
+                            test_cases=unit_test_cases,
+                            original_code=original_code if original_code else code,
+                            language=detected_language,
+                            framework=None  # Auto-detect framework
+                        )
+                        
+                        if generate_result.get("success"):
+                            generated_test_code = generate_result.get("generated_code", {}).get("testCode", "")
+                            detected_framework = generate_result.get("framework")
+                    except Exception as e:
+                        print(f"[WARNING] Failed to auto-generate test code for unit tests: {str(e)}")
+                        # Không throw error, chỉ log warning và tiếp tục
+                
+                analyze_result = {
                     "success": True,
                     "content": response,  # Store raw response
                     "result": parsed,  # Store parsed JSON
+                    "detectedLanguage": detected_language,  # Ngôn ngữ agent đã detect
                     "summary": parsed.get("summary", {}),
-                    "testCases": test_cases
+                    "testCases": unit_test_cases,  # Only return unit test cases
+                    # Thêm generated test code cho unit tests
+                    "generatedUnitTestCode": generated_test_code,
+                    "unitTestFramework": detected_framework,
+                    "unitTestCases": unit_test_cases  # Danh sách unit test cases đã được generate code
                 }
+                
+                print(f"[DEBUG ai_analysis_agent] analyze_code result keys: {list(analyze_result.keys())}")
+                import json
+                # Log preview (không log full content vì có thể rất dài)
+                preview = {k: (str(v)[:200] if isinstance(v, str) and len(str(v)) > 200 else v) 
+                          for k, v in analyze_result.items() if k != "content"}
+                print(f"[DEBUG ai_analysis_agent] analyze_code result preview: {json.dumps(preview, indent=2, default=str)}")
+                print(f"[DEBUG ai_analysis_agent] Generated unit test code length: {len(generated_test_code) if generated_test_code else 0}")
+                print(f"[DEBUG ai_analysis_agent] Unit test cases count: {len(unit_test_cases)}")
+                
+                return analyze_result
             else:
                 # Fallback: parse từ text
                 return {
@@ -472,14 +634,16 @@ Lưu ý QUAN TRỌNG:
             code = task.get("code", "")
             language = task.get("language", "unknown")
             context = task.get("context")
+            original_code = task.get("original_code")  # Nhận original_code nếu có
             
-            if not code:
+            if not code and not original_code:
                 return {
                     "success": False,
-                    "error": "Missing 'code' field"
+                    "error": "Missing 'code' or 'original_code' field"
                 }
             
-            result = self.analyze_code(code, language, context)
+            # Ưu tiên dùng original_code để agent đọc và detect language
+            result = self.analyze_code(code, language, context, original_code=original_code)
             return result
         
         elif action == "analyze_error":
@@ -530,11 +694,12 @@ Lưu ý QUAN TRỌNG:
         else:
             # Default: try to analyze as code
             code = task.get("code") or task.get("task_description") or task.get("code_content", "")
-            if code and len(code) > 50:  # Phải có code thực sự (ít nhất 50 ký tự)
+            original_code = task.get("original_code")  # Nhận original_code nếu có
+            if (code or original_code) and len(code or original_code) > 50:  # Phải có code thực sự (ít nhất 50 ký tự)
                 language = task.get("language", "unknown")
                 context = task.get("context")
-                print(f"[DEBUG ai_analysis_agent] Default action: analyzing code, language={language}, code_length={len(code)}")
-                return self.analyze_code(code, language, context)
+                print(f"[DEBUG ai_analysis_agent] Default action: analyzing code, language={language}, code_length={len(code or original_code)}")
+                return self.analyze_code(code, language, context, original_code=original_code)
             
             # Nếu không có code, trả về error thay vì error analysis
             return {
@@ -590,7 +755,33 @@ Test Case {i+1}:
             for i, tc in enumerate(test_cases)
         ])
         
-        prompt = f"""Generate actual test code cho các test cases sau:
+        # Framework-specific instructions
+        framework_instructions = ""
+        if framework.lower() == "pytest":
+            framework_instructions = """
+For pytest, you MUST:
+- Use function-based tests: `def test_*():` (NOT class-based unless necessary)
+- Each test function name must start with `test_`
+- Do NOT use `self` parameter unless using a test class
+- Import pytest: `import pytest`
+- Use simple assert statements: `assert condition`
+- Example format:
+```python
+import pytest
+
+def test_function_name():
+    # Arrange
+    # Act
+    # Assert
+    assert result == expected
+```
+
+CRITICAL: Do NOT include `sys.path.insert()` or path manipulations. 
+Do NOT include imports like `from product_manager import` - the import will be added automatically.
+Just generate the test functions directly.
+"""
+        
+        prompt = f"""Generate actual test code for the following test cases:
 
 Language: {language}
 Framework: {framework}
@@ -600,24 +791,29 @@ Original Code (for reference):
 Test Cases to implement:
 {test_details}
 
-Yêu cầu:
-1. Generate test code hoàn chỉnh, có thể chạy được
-2. Sử dụng đúng framework và syntax cho {language}
-3. Implement đầy đủ các test cases đã liệt kê
-4. Bao gồm setup/teardown nếu cần
-5. Add assertions và error handling
+{framework_instructions}
 
-QUAN TRỌNG: Trả về JSON format:
+Requirements:
+1. Generate complete, runnable test code
+2. Use correct framework and syntax for {language}
+3. Implement all listed test cases
+4. Include setup/teardown if needed
+5. Add assertions and error handling
+6. DO NOT include sys.path manipulations
+7. DO NOT include imports for source code (will be added automatically)
+8. For pytest: Use simple function-based tests starting with `test_`
+
+IMPORTANT: Return JSON format:
 {{
   "framework": "{framework}",
-  "testCode": "// Full test code here\\n...",
+  "testCode": "Full test code here\\n...",
   "fileExtension": ".{self._get_file_extension(language)}",
   "dependencies": ["dependency1", "dependency2"],
   "testCases": [
     {{
       "id": 1,
       "name": "test case name",
-      "code": "// specific test code snippet",
+      "code": "specific test code snippet",
       "status": "generated"
     }}
   ]
@@ -638,18 +834,37 @@ QUAN TRỌNG: Trả về JSON format:
                 # Fallback: parse entire response
                 parsed = json.loads(response)
             
-            return {
+            generate_result = {
                 "success": True,
                 "generated_code": parsed,
                 "framework": framework,
                 "language": language
             }
+            
+            print(f"[DEBUG ai_analysis_agent] generate_test_code result keys: {list(generate_result.keys())}")
+            import json
+            # Log preview của generated_code (không log full testCode vì rất dài)
+            preview = generate_result.copy()
+            if "generated_code" in preview and isinstance(preview["generated_code"], dict):
+                preview["generated_code"] = {
+                    k: (str(v)[:200] + "..." if isinstance(v, str) and len(str(v)) > 200 else v)
+                    for k, v in preview["generated_code"].items()
+                }
+            print(f"[DEBUG ai_analysis_agent] generate_test_code result preview: {json.dumps(preview, indent=2, default=str)}")
+            if parsed.get("testCode"):
+                print(f"[DEBUG ai_analysis_agent] Generated test code length: {len(parsed.get('testCode', ''))}")
+            
+            return generate_result
         except Exception as e:
-            return {
+            error_result = {
                 "success": False,
                 "error": f"Failed to generate test code: {str(e)}",
                 "raw_response": response if 'response' in locals() else ""
             }
+            print(f"[ERROR ai_analysis_agent] generate_test_code failed: {json.dumps(error_result, indent=2, default=str)}")
+            import traceback
+            print(f"[ERROR ai_analysis_agent] Traceback: {traceback.format_exc()}")
+            return error_result
     
     def _get_file_extension(self, language: str) -> str:
         """Get file extension cho test file"""

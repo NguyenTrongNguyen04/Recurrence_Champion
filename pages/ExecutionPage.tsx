@@ -29,9 +29,6 @@ const TestLogModal = ({ isOpen, onClose, result }: { isOpen: boolean, onClose: (
                         <TerminalIcon />
                         Test Execution Logs
                     </h2>
-                    <button onClick={onClose} className="p-1 rounded-full hover:bg-surface2">
-                        <XIcon />
-                    </button>
                 </div>
                 
                 <div className="grid grid-cols-2 gap-4 mb-6 px-4">
@@ -106,6 +103,7 @@ const ExecutionPage = () => {
     const [generatedTestCode, setGeneratedTestCode] = useState<string>('');
     const [framework, setFramework] = useState<string>('unknown');
     const [language, setLanguage] = useState<string>('unknown');
+    const [executionMode, setExecutionMode] = useState<'real' | 'simulation' | null>(null);
     
     // State for the new modal
     const [isLogModalOpen, setLogModalOpen] = useState(false);
@@ -132,8 +130,33 @@ const ExecutionPage = () => {
                 const selectedTests: SuggestedTest[] = JSON.parse(selectedTestsStr);
                 const context = contextStr ? JSON.parse(contextStr) : {};
                 
-                // Prepare test cases for API
-                const testCases = selectedTests.map(tc => ({
+                // Sắp xếp test cases: Happy case (unit/happy_path) trước, negative/edge sau
+                const sortedTests = [...selectedTests].sort((a, b) => {
+                    // Ưu tiên theo type: unit/happy_path > integration > edge > negative
+                    const typePriority: Record<string, number> = {
+                        'unit': 1,
+                        'happy_path': 1,
+                        'integration': 2,
+                        'edge': 3,
+                        'negative': 4
+                    };
+                    
+                    const priorityA = typePriority[a.type] || 5;
+                    const priorityB = typePriority[b.type] || 5;
+                    
+                    // Nếu cùng priority, sắp xếp theo complexity (S < M < L)
+                    if (priorityA === priorityB) {
+                        const complexityOrder: Record<string, number> = { 'S': 1, 'M': 2, 'L': 3 };
+                        const compA = complexityOrder[a.complexity] || 4;
+                        const compB = complexityOrder[b.complexity] || 4;
+                        return compA - compB;
+                    }
+                    
+                    return priorityA - priorityB;
+                });
+                
+                // Prepare test cases for API (đã được sắp xếp)
+                const testCases = sortedTests.map(tc => ({
                     id: tc.id,
                     name: tc.name,
                     function: tc.function,
@@ -145,8 +168,8 @@ const ExecutionPage = () => {
                     expectedResult: (tc as any).expectedResult || ''
                 }));
                 
-                // Set initial running state
-                const initialResults: RunResult[] = selectedTests.map((tc, idx) => ({
+                // Update initial results theo thứ tự đã sắp xếp
+                const initialResults: RunResult[] = sortedTests.map((tc, idx) => ({
                     id: idx + 1,
                     name: tc.name,
                     status: 'running' as const,
@@ -155,6 +178,7 @@ const ExecutionPage = () => {
                     branch: 'main',
                     author: 'System'
                 }));
+                
                 setRunResults(initialResults);
                 setProgress(0);
                 
@@ -169,7 +193,11 @@ const ExecutionPage = () => {
                         original_code: context.original_code || '',
                         language: context.language || 'unknown',
                         framework: null, // Auto-detect
-                        risks: context.risks || [] // Truyền risks từ analysis
+                        risks: context.risks || [], // Truyền risks từ analysis
+                        // Truyền generated unit test code từ AI Analysis Agent (nếu có)
+                        generated_unit_test_code: context.generated_unit_test_code || '',
+                        unit_test_framework: context.unit_test_framework || '',
+                        unit_test_cases: context.unit_test_cases || []
                     })
                 });
                 
@@ -185,9 +213,18 @@ const ExecutionPage = () => {
                 }
                 
                 // Update UI with results
+                // Ưu tiên lấy language từ execution result (AI Agent đã detect)
+                // Hoặc từ generated_code.language hoặc summary.language
+                const detectedLanguage = data.execution?.language || 
+                                        data.generated_code?.language ||
+                                        data.summary?.language ||
+                                        context.language || // Fallback về context từ AnalyzePage
+                                        'unknown';
+                
                 setFramework(data.summary?.framework || data.generated_code?.framework || 'unknown');
-                setLanguage(data.summary?.language || 'unknown');
+                setLanguage(detectedLanguage);
                 setGeneratedTestCode(data.generated_code?.code || '');
+                setExecutionMode(data.execution?.execution_mode || 'simulation');
                 
                 const execution = data.execution || {};
                 const results = execution.results || [];
@@ -197,51 +234,122 @@ const ExecutionPage = () => {
                 const resultsMap = new Map<string, any>();
                 results.forEach((r: any) => {
                     const testName = r.name || '';
+                    // Store both exact name and normalized name (lowercase, no spaces)
                     resultsMap.set(testName, r);
+                    resultsMap.set(testName.toLowerCase().trim(), r);
                 });
                 
-                // Map results back to original test order, matching by name
+                // Also create a function name map for additional matching
+                const functionMap = new Map<string, any>();
+                sortedTests.forEach((tc) => {
+                    if (tc.function) {
+                        // Try to find matching result by function name
+                        for (const [resultName, resultData] of resultsMap.entries()) {
+                            if (resultName.toLowerCase().includes(tc.function.toLowerCase()) ||
+                                tc.function.toLowerCase().includes(resultName.toLowerCase().split('_')[0])) {
+                                functionMap.set(tc.function.toLowerCase(), resultData);
+                                break;
+                            }
+                        }
+                    }
+                });
+                
+                // Debug: Log matching info
+                console.log('[ExecutionPage] API Results:', results.length);
+                console.log('[ExecutionPage] Sorted Tests:', sortedTests.length);
+                console.log('[ExecutionPage] Results Map keys:', Array.from(resultsMap.keys()));
+                
+                // Map results back to sorted test order, matching by name
                 // Use stricter matching - only use fallback if absolutely necessary
-                const finalResults: RunResult[] = selectedTests.map((tc, idx) => {
+                const finalResults: RunResult[] = sortedTests.map((tc, idx) => {
                     // Try exact match first
                     let apiResult = resultsMap.get(tc.name);
+                    
+                    // Try normalized match (lowercase, trimmed)
+                    if (!apiResult) {
+                        apiResult = resultsMap.get(tc.name.toLowerCase().trim());
+                    }
                     
                     // If no exact match, try partial match (test name contains tc.name or vice versa)
                     if (!apiResult) {
                         for (const [resultName, resultData] of resultsMap.entries()) {
-                            const tcNameLower = tc.name.toLowerCase();
-                            const resultNameLower = resultName.toLowerCase();
+                            // Skip function-based keys
+                            if (resultName.startsWith('func:')) continue;
+                            
+                            const tcNameLower = tc.name.toLowerCase().trim();
+                            const resultNameLower = resultName.toLowerCase().trim();
+                            
+                            // More flexible matching: check if names match after removing common prefixes/suffixes
+                            const tcNameClean = tcNameLower.replace(/^test_?|_test$/g, '').replace(/[_\s]/g, '');
+                            const resultNameClean = resultNameLower.replace(/^test_?|_test$/g, '').replace(/[_\s]/g, '');
+                            
                             if (tcNameLower === resultNameLower || 
                                 resultNameLower.includes(tcNameLower) || 
-                                tcNameLower.includes(resultNameLower)) {
+                                tcNameLower.includes(resultNameLower) ||
+                                tcNameClean === resultNameClean ||
+                                tcNameClean.includes(resultNameClean) ||
+                                resultNameClean.includes(tcNameClean)) {
                                 apiResult = resultData;
+                                console.log(`[ExecutionPage] Matched "${tc.name}" with "${resultName}"`);
                                 break;
                             }
                         }
                     }
                     
-                    // Last resort: use index-based fallback
+                    // Try matching by function name if test case has function field
+                    if (!apiResult && tc.function) {
+                        apiResult = functionMap.get(tc.function.toLowerCase());
+                        if (apiResult) {
+                            console.log(`[ExecutionPage] Matched "${tc.name}" by function "${tc.function}"`);
+                        }
+                    }
+                    
+                    // Last resort: use index-based fallback (only if we have enough results)
                     if (!apiResult && idx < results.length) {
                         apiResult = results[idx];
+                        console.log(`[ExecutionPage] Using index-based fallback for "${tc.name}" (idx ${idx})`);
                     }
                     
                     if (!apiResult) {
-                        // If no matching result found, keep as running (shouldn't happen)
+                        // If no matching result found, check if execution is complete
+                        // If execution is complete and we still don't have result, mark as failed
+                        console.warn(`[ExecutionPage] No result found for test: ${tc.name}`);
                         return {
                             id: idx + 1,
                             name: tc.name,
-                            status: 'running' as const,
-                            timeMs: null,
-                            log: `[INFO] Test result not found for: ${tc.name}`,
+                            status: 'fail' as const, // Mark as failed instead of running if no result found
+                            timeMs: 0,
+                            log: `[ERROR] Test result not found for: ${tc.name}. Execution may have failed.`,
+                            error: 'Test execution result not found',
                             branch: 'main',
-                            author: 'System'
+                            author: 'System',
+                            executedAt: new Date().toISOString(),
+                            executionMode: execution.execution_mode || 'simulation'
                         };
                     }
                     
-                    // Ensure status is correctly mapped - only accept 'pass' or 'fail'
-                    const status = apiResult.status === 'pass' ? 'pass' as const : 
-                                   apiResult.status === 'fail' ? 'fail' as const : 
-                                   'running' as const;
+                    // Normalize status - ensure it's either 'pass' or 'fail'
+                    // Backend should always return 'pass' or 'fail', but handle edge cases
+                    let status: 'pass' | 'fail' = 'fail'; // Default to fail if unclear
+                    const apiStatus = String(apiResult.status || '').toLowerCase().trim();
+                    if (apiStatus === 'pass' || apiStatus === 'passed' || apiStatus === 'success') {
+                        status = 'pass';
+                    } else if (apiStatus === 'fail' || apiStatus === 'failed' || apiStatus === 'failure') {
+                        status = 'fail';
+                    } else {
+                        // If status is unclear, check other indicators
+                        // If there's an error, it's a fail
+                        if (apiResult.error) {
+                            status = 'fail';
+                        } else if (apiResult.timeMs && apiResult.timeMs > 0) {
+                            // If test has duration and no error, assume pass
+                            status = 'pass';
+                        } else {
+                            // Default to fail if we can't determine
+                            status = 'fail';
+                        }
+                        console.warn(`[ExecutionPage] Unclear status "${apiResult.status}" for test "${tc.name}", defaulting to "${status}"`);
+                    }
                     
                     return {
                         id: apiResult.id || idx + 1,
@@ -252,27 +360,45 @@ const ExecutionPage = () => {
                         error: apiResult.error,
                         branch: 'main',
                         author: 'System',
-                        executedAt: apiResult.executedAt || new Date().toISOString()
+                        executedAt: apiResult.executedAt || new Date().toISOString(),
+                        executionMode: execution.execution_mode || 'simulation'
                     };
                 });
                 
-                // If API returned more results than selected tests, append them
-                if (results.length > selectedTests.length) {
-                    results.slice(selectedTests.length).forEach((r: any, idx: number) => {
-                        const status = r.status === 'pass' ? 'pass' as const : 
-                                       r.status === 'fail' ? 'fail' as const : 
-                                       'running' as const;
-                        finalResults.push({
-                            id: r.id || selectedTests.length + idx + 1,
-                            name: r.name || `Test ${selectedTests.length + idx + 1}`,
-                            status: status,
-                            timeMs: r.timeMs || 0,
-                            log: r.log || '',
-                            error: r.error,
-                            branch: 'main',
-                            author: 'System',
-                            executedAt: r.executedAt || new Date().toISOString()
-                        });
+                // If API returned more results than sorted tests, append them
+                // But first check if they're duplicates
+                if (results.length > sortedTests.length) {
+                    const existingNames = new Set(finalResults.map(r => r.name.toLowerCase()));
+                    results.slice(sortedTests.length).forEach((r: any, idx: number) => {
+                        const rName = (r.name || '').toLowerCase();
+                        if (!existingNames.has(rName)) {
+                            // Normalize status
+                            let status: 'pass' | 'fail' = 'fail';
+                            const apiStatus = String(r.status || '').toLowerCase().trim();
+                            if (apiStatus === 'pass' || apiStatus === 'passed' || apiStatus === 'success') {
+                                status = 'pass';
+                            } else if (apiStatus === 'fail' || apiStatus === 'failed' || apiStatus === 'failure') {
+                                status = 'fail';
+                            } else if (r.error) {
+                                status = 'fail';
+                            } else if (r.timeMs && r.timeMs > 0) {
+                                status = 'pass';
+                            }
+                            
+                            finalResults.push({
+                                id: r.id || sortedTests.length + idx + 1,
+                                name: r.name || `Test ${sortedTests.length + idx + 1}`,
+                                status: status,
+                                timeMs: r.timeMs || 0,
+                                log: r.log || '',
+                                error: r.error,
+                                branch: 'main',
+                                author: 'System',
+                                executedAt: r.executedAt || new Date().toISOString(),
+                                executionMode: execution.execution_mode || 'simulation'
+                            });
+                            existingNames.add(rName);
+                        }
                     });
                 }
                 
@@ -378,6 +504,17 @@ const ExecutionPage = () => {
                         <Badge variant="info">Selected: {runResults.length}</Badge>
                         <Badge variant="info">Framework: {framework}</Badge>
                         <Badge variant="info">Language: {language}</Badge>
+                        {executionMode && (
+                            <span 
+                                title={executionMode === 'real' ? 'Tests are executed using real pytest' : 'Tests are simulated (pytest not available or execution failed)'}
+                            >
+                                <Badge 
+                                    variant={executionMode === 'real' ? 'success' : 'warning'}
+                                >
+                                    {executionMode === 'real' ? '✓ Real Execution' : '⚠ Simulation'}
+                                </Badge>
+                            </span>
+                        )}
                         {generatedTestCode && (
                             <Button 
                                 variant="secondary" 

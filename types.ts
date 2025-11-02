@@ -29,6 +29,7 @@ export interface RunResult {
   author?: string;
   executedAt?: string;
   aiSuggestion?: AIExplain;
+  executionMode?: 'real' | 'simulation'; // Thực thi thật hay mô phỏng
 }
 
 export interface Run {

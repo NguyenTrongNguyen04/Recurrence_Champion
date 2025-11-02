@@ -348,12 +348,33 @@ QUAN TRỌNG: Trả về kết quả dưới dạng JSON với format sau:
         # Parse structured response
         parsed_response = ResponseParser.parse_ai_response(ai_response_text) if ai_response_text else {}
         
+        # Extract detectedLanguage từ analysis result nếu có (AI Agent đã detect)
+        if result.get("workflow_results"):
+            for workflow_result in result.get("workflow_results", []):
+                if workflow_result.get("step") == "ai_analysis_agent":
+                    agent_result = workflow_result.get("result", {})
+                    
+                    # Extract detectedLanguage
+                    if agent_result.get("detectedLanguage"):
+                        parsed_response["detectedLanguage"] = agent_result.get("detectedLanguage")
+                    elif agent_result.get("result") and isinstance(agent_result.get("result"), dict):
+                        if agent_result.get("result").get("detectedLanguage"):
+                            parsed_response["detectedLanguage"] = agent_result.get("result").get("detectedLanguage")
+                    
+                    # Extract generated unit test code
+                    if agent_result.get("generatedUnitTestCode"):
+                        parsed_response["generatedUnitTestCode"] = agent_result.get("generatedUnitTestCode")
+                        parsed_response["unitTestFramework"] = agent_result.get("unitTestFramework")
+                        parsed_response["unitTestCases"] = agent_result.get("unitTestCases", [])
+                    
+                    break
+        
         # Combine results
         return JSONResponse(content={
             "success": True,
             "github_data": github_data,
             "analysis": result,
-            "parsed_response": parsed_response,  # Thêm parsed response với test cases
+            "parsed_response": parsed_response,  # Thêm parsed response với test cases, detectedLanguage và generated unit test code
             "summary": {
                 "total_files": len(github_data.get("files", [])),
                 "detected_languages": list(detected_languages),
@@ -476,10 +497,34 @@ QUAN TRỌNG: Trả về kết quả dưới dạng JSON với format sau:
                 parsed_direct = json.loads(ai_response_text)
                 if isinstance(parsed_direct, dict) and ("testCases" in parsed_direct or "summary" in parsed_direct):
                     parsed_response = parsed_direct
+                    # Đảm bảo detectedLanguage được giữ lại nếu có
+                    if "detectedLanguage" in parsed_direct:
+                        parsed_response["detectedLanguage"] = parsed_direct["detectedLanguage"]
                 else:
                     parsed_response = ResponseParser.parse_ai_response(ai_response_text)
             except:
                 parsed_response = ResponseParser.parse_ai_response(ai_response_text)
+        
+        # Extract detectedLanguage và generatedUnitTestCode từ analysis result nếu có
+        if result.get("workflow_results"):
+            for workflow_result in result.get("workflow_results", []):
+                if workflow_result.get("step") == "ai_analysis_agent":
+                    agent_result = workflow_result.get("result", {})
+                    
+                    # Extract detectedLanguage
+                    if agent_result.get("detectedLanguage"):
+                        parsed_response["detectedLanguage"] = agent_result.get("detectedLanguage")
+                    elif agent_result.get("result") and isinstance(agent_result.get("result"), dict):
+                        if agent_result.get("result").get("detectedLanguage"):
+                            parsed_response["detectedLanguage"] = agent_result.get("result").get("detectedLanguage")
+                    
+                    # Extract generated unit test code
+                    if agent_result.get("generatedUnitTestCode"):
+                        parsed_response["generatedUnitTestCode"] = agent_result.get("generatedUnitTestCode")
+                        parsed_response["unitTestFramework"] = agent_result.get("unitTestFramework")
+                        parsed_response["unitTestCases"] = agent_result.get("unitTestCases", [])
+                    
+                    break
         
         return JSONResponse(content={
             "success": True,
@@ -489,7 +534,7 @@ QUAN TRỌNG: Trả về kết quả dưới dạng JSON với format sau:
                 "lines": len(code.split("\n"))
             },
             "analysis": result,
-            "parsed_response": parsed_response  # Thêm parsed response với test cases
+            "parsed_response": parsed_response  # Thêm parsed response với test cases và generated unit test code
         })
     
     except HTTPException:
@@ -688,12 +733,35 @@ QUAN TRỌNG: Trả về kết quả dưới dạng JSON với format sau:
             parsed_response["testCases"] = []
         print(f"[DEBUG analyze-files] Final parsed_response.testCases count: {len(parsed_response.get('testCases', []))}")
         
+        # Extract detectedLanguage từ analysis result nếu có (AI Agent đã detect)
+        if result.get("workflow_results"):
+            for workflow_result in result.get("workflow_results", []):
+                if workflow_result.get("step") == "ai_analysis_agent":
+                    agent_result = workflow_result.get("result", {})
+                    
+                    # Extract detectedLanguage
+                    if agent_result.get("detectedLanguage"):
+                        parsed_response["detectedLanguage"] = agent_result.get("detectedLanguage")
+                        print(f"[DEBUG analyze-files] Found detectedLanguage from agent_result: {agent_result.get('detectedLanguage')}")
+                    elif agent_result.get("result") and isinstance(agent_result.get("result"), dict):
+                        if agent_result.get("result").get("detectedLanguage"):
+                            parsed_response["detectedLanguage"] = agent_result.get("result").get("detectedLanguage")
+                            print(f"[DEBUG analyze-files] Found detectedLanguage from agent_result.result: {agent_result.get('result').get('detectedLanguage')}")
+                    
+                    # Extract generated unit test code
+                    if agent_result.get("generatedUnitTestCode"):
+                        parsed_response["generatedUnitTestCode"] = agent_result.get("generatedUnitTestCode")
+                        parsed_response["unitTestFramework"] = agent_result.get("unitTestFramework")
+                        parsed_response["unitTestCases"] = agent_result.get("unitTestCases", [])
+                    
+                    break
+        
         return JSONResponse(content={
             "success": True,
             "files_info": file_info,
             "detected_languages": list(detected_languages) if detected_languages else [language] if language else [],
             "analysis": result,
-            "parsed_response": parsed_response  # Thêm parsed response với test cases
+            "parsed_response": parsed_response  # Thêm parsed response với test cases và generated unit test code
         })
     
     except HTTPException:
@@ -736,46 +804,144 @@ async def execute_tests(
         if not test_cases:
             raise HTTPException(status_code=400, detail="Missing 'test_cases' field")
         
-        # Step 1: Generate test code với AI Analysis Agent
-        ai_agent = orchestrator.agents["ai_analysis_agent"]
-        generate_result = ai_agent.process({
-            "action": "generate_test_code",
-            "test_cases": test_cases,
-            "original_code": original_code,
-            "language": language,
-            "framework": framework
-        })
+        # Step 1: Detect language từ original_code nếu language là "unknown" (AI Agent sẽ tự detect)
+        detected_language = language
+        # Chỉ detect lại nếu language là "unknown" và có original_code
+        if original_code and original_code.strip() and (language == "unknown" or not language):
+            # Gọi AI Analysis Agent để detect language từ original_code
+            ai_agent = orchestrator.agents["ai_analysis_agent"]
+            detect_result = ai_agent.process({
+                "action": "analyze_code",
+                "code": original_code[:5000],  # Sample để detect
+                "original_code": original_code[:5000],
+                "language": "unknown"  # Để agent tự detect
+            })
+            print(f"[DEBUG execute-tests] AI Analysis Agent (detect) response keys: {list(detect_result.keys()) if isinstance(detect_result, dict) else 'not dict'}")
+            import json
+            print(f"[DEBUG execute-tests] AI Analysis Agent (detect) full response: {json.dumps(detect_result, indent=2, default=str)[:2000]}")
+            if detect_result.get("detectedLanguage"):
+                detected_language = detect_result.get("detectedLanguage")
+                print(f"[DEBUG execute-tests] AI Agent detected language: {detected_language}")
+            elif detect_result.get("result") and isinstance(detect_result.get("result"), dict):
+                if detect_result.get("result").get("detectedLanguage"):
+                    detected_language = detect_result.get("result").get("detectedLanguage")
+                    print(f"[DEBUG execute-tests] AI Agent detected language from result: {detected_language}")
+        elif language and language != "unknown":
+            # Sử dụng language từ context (đã được detect ở AnalyzePage)
+            detected_language = language
+            print(f"[DEBUG execute-tests] Using language from context: {detected_language}")
         
-        if not generate_result.get("success"):
-            raise HTTPException(
-                status_code=500,
-                detail=f"Failed to generate test code: {generate_result.get('error', 'Unknown error')}"
-            )
+        # Step 2: Kiểm tra xem đã có generated unit test code từ analyze chưa
+        # (AI Analysis Agent đã tự động generate khi analyze)
+        pre_generated_test_code = request.get("generated_unit_test_code")
+        pre_generated_framework = request.get("unit_test_framework")
+        unit_test_cases_from_analyze = request.get("unit_test_cases", [])
         
-        generated_code_data = generate_result.get("generated_code", {})
-        test_code = generated_code_data.get("testCode", "")
-        detected_framework = generate_result.get("framework", framework or "custom")
+        # Khởi tạo biến để dùng ở ngoài if/else
+        generated_code_data = {}
+        generate_result = None
+        
+        if pre_generated_test_code and pre_generated_test_code.strip():
+            # Nếu đã có test code từ analyze, dùng luôn (không cần generate lại)
+            print(f"[DEBUG execute-tests] Using pre-generated unit test code from analyze (length: {len(pre_generated_test_code)})")
+            test_code = pre_generated_test_code
+            detected_framework = pre_generated_framework or framework or "custom"
+            # Sử dụng unit test cases từ analyze
+            happy_cases = unit_test_cases_from_analyze if unit_test_cases_from_analyze else test_cases
+            # Khởi tạo generated_code_data với empty dict (sẽ dùng fallback values)
+            generated_code_data = {}
+        else:
+            # Nếu chưa có, generate test code cho unit tests (fallback)
+            print(f"[DEBUG execute-tests] No pre-generated test code found, generating for unit tests...")
+            # Sắp xếp test cases và chỉ lấy unit tests
+            type_priority = {
+                'unit': 1,
+                'happy_path': 1,
+                'integration': 2,
+                'edge': 3,
+                'negative': 4
+            }
+            
+            def get_test_priority(tc):
+                test_type = tc.get("type", "").lower()
+                return type_priority.get(test_type, 5)
+            
+            sorted_test_cases = sorted(test_cases, key=get_test_priority)
+            
+            # Chỉ lấy happy cases (unit/happy_path) để generate
+            happy_cases = [tc for tc in sorted_test_cases if tc.get("type", "").lower() in ['unit', 'happy_path']]
+            
+            if not happy_cases:
+                happy_cases = sorted_test_cases[:3]  # Fallback: lấy 3 test cases đầu tiên
+            
+            # Generate test code cho unit tests
+            ai_agent = orchestrator.agents["ai_analysis_agent"]
+            generate_result = ai_agent.process({
+                "action": "generate_test_code",
+                "test_cases": happy_cases,
+                "original_code": original_code,
+                "language": detected_language,
+                "framework": framework
+            })
+            
+            print(f"[DEBUG execute-tests] AI Analysis Agent (generate) response keys: {list(generate_result.keys()) if isinstance(generate_result, dict) else 'not dict'}")
+            import json
+            print(f"[DEBUG execute-tests] AI Analysis Agent (generate) full response: {json.dumps(generate_result, indent=2, default=str)[:2000]}")
+            
+            if not generate_result.get("success"):
+                raise HTTPException(
+                    status_code=500,
+                    detail=f"Failed to generate test code: {generate_result.get('error', 'Unknown error')}"
+                )
+            
+            generated_code_data = generate_result.get("generated_code", {})
+            test_code = generated_code_data.get("testCode", "")
+            detected_framework = generate_result.get("framework", framework or "custom")
+            print(f"[DEBUG execute-tests] Generated test code length: {len(test_code) if test_code else 0}, framework: {detected_framework}")
+        
+        # Update detected_language từ generate_result nếu có (chỉ khi generate mới)
+        if generate_result and generate_result.get("detectedLanguage"):
+            detected_language = generate_result.get("detectedLanguage")
         
         if not test_code:
             raise HTTPException(status_code=500, detail="Generated test code is empty")
         
-        # Step 2: Execute test code với Execution Agent - truyền risks và original_code vào
+        # Step 3: Execute test code với Execution Agent
+        # Nếu muốn execution agent tự generate từ original_code, có thể truyền test_code="" hoặc không truyền
+        # Nhưng ở đây ta vẫn truyền test_code nếu đã có (để tương thích với flow cũ)
         execution_agent = orchestrator.agents["execution_agent"]
+        # Chỉ truyền unit test cases để execute (test code đã được generate cho unit tests rồi)
+        execute_test_cases = happy_cases if 'happy_cases' in locals() and happy_cases else unit_test_cases_from_analyze if unit_test_cases_from_analyze else test_cases
+        
+        # NOTE: Execution agent sẽ tự generate test code từ original_code nếu test_code không được truyền hoặc rỗng
+        # Đảm bảo original_code luôn được truyền vào để execution agent có thể tạo source file
         execute_result = execution_agent.process({
             "action": "execute_test_code",
-            "test_code": test_code,
-            "original_code": original_code,  # Truyền original_code để có thể combine khi execute
+            "test_code": test_code if test_code else "",  # Có thể để rỗng để execution agent tự generate
+            "original_code": original_code,  # REQUIRED: Truyền original_code để tạo source file và generate test code nếu cần
             "framework": detected_framework,
-            "language": language,
-            "test_cases": test_cases,
+            "language": detected_language,  # Sử dụng detected_language (từ AI Agent)
+            "test_cases": execute_test_cases,  # Optional: test cases (sẽ được generate nếu không có)
             "risks": risks  # Truyền risks vào execution agent
         })
         
-        if not execute_result.get("success"):
+        print(f"[DEBUG execute-tests] Execution Agent response keys: {list(execute_result.keys()) if isinstance(execute_result, dict) else 'not dict'}")
+        import json
+        print(f"[DEBUG execute-tests] Execution Agent full response: {json.dumps(execute_result, indent=2, default=str)[:2000]}")
+        
+        # Check if there are results even if success is false (e.g., collection errors)
+        # We should still return results to frontend so users can see the errors
+        has_results = execute_result.get("results") and len(execute_result.get("results", [])) > 0
+        
+        if not execute_result.get("success") and not has_results:
+            # Only raise error if there are no results to show
             raise HTTPException(
                 status_code=500,
                 detail=f"Failed to execute tests: {execute_result.get('error', 'Unknown error')}"
             )
+        
+        # If success is false but we have results (collection errors), 
+        # continue to return them so frontend can display the errors
         
         # Combine results
         return JSONResponse(content={
@@ -793,10 +959,19 @@ async def execute_tests(
                 "failed": execute_result.get("failed"),
                 "durationMs": execute_result.get("durationMs"),
                 "results": execute_result.get("results", []),
-                "executed_at": execute_result.get("executed_at")
+                "executed_at": execute_result.get("executed_at"),
+                "execution_mode": execute_result.get("execution_mode", "simulation"),  # Thêm execution_mode
+                "language": detected_language  # Trả về detected_language từ AI Agent
+            },
+            "generated_code": {
+                "code": test_code,
+                "framework": detected_framework,
+                "language": detected_language,  # Thêm language vào generated_code
+                "file_extension": generated_code_data.get("fileExtension", ""),
+                "dependencies": generated_code_data.get("dependencies", [])
             },
             "summary": {
-                "language": language,
+                "language": detected_language,  # Sử dụng detected_language (từ AI Agent)
                 "framework": detected_framework,
                 "test_cases_count": len(test_cases)
             }

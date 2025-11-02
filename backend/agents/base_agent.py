@@ -41,9 +41,12 @@ class BaseAgent(ABC):
             messages.append({"role": "user", "content": f"Context:\n{context_str}"})
         
         try:
+            # Use model from config or environment, fallback to default
+            from config import Config
+            model = Config.CEREBRAS_MODEL if hasattr(Config, 'CEREBRAS_MODEL') else os.environ.get("CEREBRAS_MODEL", "gpt-oss-120b")
             response = self.client.chat.completions.create(
                 messages=messages,
-                model="qwen-3-coder-480b",
+                model=model,
             )
             return response.choices[0].message.content
         except Exception as e:

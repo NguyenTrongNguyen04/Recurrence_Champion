@@ -6,7 +6,7 @@ from .base_agent import BaseAgent
 
 
 class LeaderAgent(BaseAgent):
-    """Agent trưởng - phân tích yêu cầu và giao việc cho các agent chuyên gia"""
+    """Leader agent - analyzes requirements and assigns tasks to specialized agents"""
     
     def __init__(self, api_key: str = None):
         super().__init__("Leader", api_key)
@@ -18,51 +18,51 @@ class LeaderAgent(BaseAgent):
         ]
     
     def get_system_prompt(self) -> str:
-        return """Bạn là Leader Agent - một Project Manager thông minh trong hệ thống TestFlow AI.
+        return """You are Leader Agent - an intelligent Project Manager in the TestFlow AI system.
 
-Nhiệm vụ của bạn:
-1. Phân tích yêu cầu từ người dùng
-2. Xác định các agent chuyên gia cần thiết để hoàn thành task
-3. Phân chia task thành các subtasks phù hợp với từng agent
-4. Điều phối workflow giữa các agents
+Your responsibilities:
+1. Analyze user requirements
+2. Identify which specialized agents are needed to complete the task
+3. Break down tasks into subtasks suitable for each agent
+4. Coordinate workflow between agents
 
-Các agent chuyên gia có sẵn:
-- testing_agent: Xử lý file kết quả test (JUnit XML, JSON, Playwright, PyTest...)
-- execution_agent: Quản lý test runs, lưu metadata (branch, commit, author, time)
-- reporting_agent: Tạo dashboard, báo cáo, biểu đồ thống kê
-- ai_analysis_agent: Phân tích lỗi tự động, tóm tắt nguyên nhân, gợi ý fix
+Available specialized agents:
+- testing_agent: Process test result files (JUnit XML, JSON, Playwright, PyTest...)
+- execution_agent: Manage test runs, store metadata (branch, commit, author, time)
+- reporting_agent: Create dashboards, reports, statistical charts
+- ai_analysis_agent: Automatically analyze errors, summarize root causes, suggest fixes
 
-Bạn cần:
-- Phân tích task một cách chi tiết
-- Xác định agent nào cần tham gia
-- Tạo kế hoạch thực thi rõ ràng
-- Trả về JSON với format:
+You need to:
+- Analyze tasks in detail
+- Identify which agents should participate
+- Create a clear execution plan
+- Return JSON with format:
 {
   "agents_needed": ["agent1", "agent2"],
   "workflow": [
-    {"agent": "agent1", "task": "mô tả task", "input": {...}},
-    {"agent": "agent2", "task": "mô tả task", "input": {...}}
+    {"agent": "agent1", "task": "task description", "input": {...}},
+    {"agent": "agent2", "task": "task description", "input": {...}}
   ],
-  "reasoning": "Giải thích tại sao chọn các agent này và workflow này"
+  "reasoning": "Explanation of why these agents and workflow were chosen"
 }"""
     
     def analyze_task(self, user_request: str, context: Dict[str, Any] = None) -> Dict[str, Any]:
         """
         Phân tích task và tạo workflow
         """
-        prompt = f"""Phân tích yêu cầu sau và tạo kế hoạch thực thi:
+        prompt = f"""Analyze the following request and create an execution plan:
 
-Yêu cầu: {user_request}
+Request: {user_request}
 
-Context hiện tại: {context or "Không có"}
+Current context: {context or "None"}
 
-Hãy xác định:
-1. Agent nào cần tham gia?
-2. Thứ tự thực hiện (workflow)
-3. Input cho từng agent
-4. Cách kết nối output của agent này với input của agent tiếp theo
+Please determine:
+1. Which agents should participate?
+2. Execution order (workflow)
+3. Input for each agent
+4. How to connect output of one agent to input of the next agent
 
-Trả về JSON với format đã mô tả trong system prompt."""
+Return JSON with the format described in the system prompt."""
         
         response = self.call_llm(prompt, context)
         
@@ -80,14 +80,14 @@ Trả về JSON với format đã mô tả trong system prompt."""
                     "agents_needed": [],
                     "workflow": [],
                     "reasoning": response,
-                    "error": "Không thể parse JSON từ response"
+                    "error": "Could not parse JSON from response"
                 }
         except Exception as e:
             return {
                 "agents_needed": [],
                 "workflow": [],
                 "reasoning": response,
-                "error": f"Lỗi parse JSON: {str(e)}"
+                "error": f"JSON parse error: {str(e)}"
             }
     
     def determine_agent_type(self, task_description: str) -> List[str]:
