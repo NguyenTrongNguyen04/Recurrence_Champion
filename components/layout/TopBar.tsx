@@ -22,7 +22,7 @@ const TopBar: React.FC = () => {
   const avatarUrl = `https://i.pravatar.cc/40?u=${userEmail}`;
 
   return (
-    <header className="flex-shrink-0 bg-surface h-[64px] flex items-center justify-between px-6 border-b border-surface2">
+    <header className="flex-shrink-0 bg-surface h-[80px] flex items-center justify-between px-6 border-b border-surface2">
       <div className="relative w-full max-w-xs">
         <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
           <SearchIcon className="text-primary-muted" />
