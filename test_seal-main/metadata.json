@@ -1,0 +1,5 @@
+{
+  "name": "TestStudio",
+  "description": "An AI-powered testing agent that streamlines the entire testing workflow, from analysis and test case generation to execution and detailed reporting. Features a modern, dark-themed UI with insightful dashboards.",
+  "requestFramePermissions": []
+}

@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>TestStudio</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            fontFamily: {
+              sans: ['Inter', 'sans-serif'],
+            },
+            colors: {
+              background: '#0B1020',
+              surface: '#11162A',
+              surface2: '#151B33',
+              primary: {
+                DEFAULT: '#E5E7EB',
+                muted: '#94A3B8'
+              },
+              accent: {
+                cyan: '#22D3EE',
+                violet: '#7C3AED',
+              },
+              status: {
+                success: '#10B981',
+                danger: '#EF4444',
+                warning: '#F59E0B',
+              }
+            },
+            backgroundImage: {
+              'gradient-g1': 'linear-gradient(90deg, #22D3EE, #7C3AED)',
+              'gradient-g2': 'radial-gradient(circle, rgba(124,58,237,0.25), transparent 70%)',
+              'gradient-ai': 'linear-gradient(135deg, rgba(34, 211, 238, 0.1) 0%, rgba(124, 58, 237, 0.1) 100%)',
+              'mesh-gradient': 'radial-gradient(at 0% 0%, rgba(34, 211, 238, 0.15) 0px, transparent 50%), radial-gradient(at 100% 0%, rgba(124, 58, 237, 0.15) 0px, transparent 50%), radial-gradient(at 100% 100%, rgba(16, 185, 129, 0.1) 0px, transparent 50%), radial-gradient(at 0% 100%, rgba(34, 211, 238, 0.1) 0px, transparent 50%)',
+              'modern-gradient': 'linear-gradient(135deg, rgba(59, 130, 246, 0.2) 0%, rgba(34, 211, 238, 0.1) 25%, rgba(124, 58, 237, 0.1) 75%, rgba(11, 16, 32, 0.95) 100%)',
+            },
+            boxShadow: {
+              'glow-g3': '0 0 25px -5px rgba(124, 58, 237, 0.35)',
+              'glow-cyan': '0 0 20px -5px rgba(34, 211, 238, 0.5), 0 0 40px -10px rgba(34, 211, 238, 0.3)',
+              'glow-violet': '0 0 20px -5px rgba(124, 58, 237, 0.5), 0 0 40px -10px rgba(124, 58, 237, 0.3)',
+              'glow-ai': '0 0 30px -5px rgba(34, 211, 238, 0.4), 0 0 60px -10px rgba(124, 58, 237, 0.3)',
+              'glow-border': '0 0 15px rgba(34, 211, 238, 0.6), inset 0 0 15px rgba(34, 211, 238, 0.1)',
+              'glow-border-strong': '0 0 25px rgba(34, 211, 238, 0.8), 0 0 50px rgba(34, 211, 238, 0.4), inset 0 0 20px rgba(34, 211, 238, 0.2)',
+              'inner-glow': 'inset 0 0 20px -5px rgba(34, 211, 238, 0.2)',
+            },
+            animation: {
+              'gradient-x': 'gradient-x 15s ease infinite',
+              'gradient-y': 'gradient-y 15s ease infinite',
+              'gradient-xy': 'gradient-xy 15s ease infinite',
+              'gradient-slow-shift': 'gradient-slow-shift 25s ease infinite',
+              'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+              'glow-pulse': 'glow-pulse 2s ease-in-out infinite',
+              'float': 'float 6s ease-in-out infinite',
+            },
+            keyframes: {
+              'gradient-y': {
+                '0%, 100%': {
+                  'background-size': '400% 400%',
+                  'background-position': 'center top'
+                },
+                '50%': {
+                  'background-size': '200% 200%',
+                  'background-position': 'center center'
+                }
+              },
+              'gradient-x': {
+                '0%, 100%': {
+                  'background-size': '200% 200%',
+                  'background-position': 'left center'
+                },
+                '50%': {
+                  'background-size': '200% 200%',
+                  'background-position': 'right center'
+                }
+              },
+              'gradient-xy': {
+                '0%, 100%': {
+                  'background-size': '400% 400%',
+                  'background-position': 'left center'
+                },
+                '50%': {
+                  'background-size': '200% 200%',
+                  'background-position': 'right center'
+                }
+              },
+              'glow-pulse': {
+                '0%, 100%': { opacity: '1' },
+                '50%': { opacity: '0.7' }
+              },
+              'float': {
+                '0%, 100%': { transform: 'translateY(0px)' },
+                '50%': { transform: 'translateY(-20px)' }
+              },
+              'gradient-slow-shift': {
+                '0%, 100%': {
+                  'background-position': '0% 0%, 10% 10%, 90% 90%'
+                },
+                '33%': {
+                  'background-position': '50% 50%, 30% 30%, 70% 70%'
+                },
+                '66%': {
+                  'background-position': '100% 100%, 20% 20%, 80% 80%'
+                }
+              }
+            },
+            backdropBlur: {
+              xs: '2px',
+            }
+          }
+        }
+      }
+    </script>
+    <style>
+      body {
+        background-color: #0B1020;
+        font-family: 'Inter', sans-serif;
+        color: #E5E7EB;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+        position: relative;
+        overflow-x: hidden;
+        min-height: 100vh;
+      }
+
+      /* Modern Gradient Background - như mẫu */
+      body::before {
+        content: '';
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: 
+          /* Main gradient: bright blue (top-left) → dark purple (bottom-right) */
+          linear-gradient(135deg, 
+            rgba(59, 130, 246, 0.25) 0%,
+            rgba(34, 211, 238, 0.15) 15%,
+            rgba(99, 102, 241, 0.1) 35%,
+            rgba(124, 58, 237, 0.12) 50%,
+            rgba(79, 70, 229, 0.15) 70%,
+            rgba(30, 27, 75, 0.9) 85%,
+            rgba(11, 16, 32, 0.98) 100%
+          ),
+          /* Depth layers với radial gradients */
+          radial-gradient(ellipse 80% 60% at 10% 10%, rgba(59, 130, 246, 0.2) 0%, transparent 60%),
+          radial-gradient(ellipse 60% 80% at 90% 90%, rgba(124, 58, 237, 0.15) 0%, transparent 70%);
+        background-size: 100% 100%, 1200px 1200px, 1400px 1400px;
+        animation: gradient-slow-shift 30s ease infinite;
+        pointer-events: none;
+        z-index: 0;
+      }
+
+      /* Subtle Grid Pattern - fine và uniform như mẫu */
+      body::after {
+        content: '';
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-image: 
+          /* Fine square grid - visible hơn ở light areas */
+          linear-gradient(rgba(59, 130, 246, 0.04) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(59, 130, 246, 0.04) 1px, transparent 1px);
+        background-size: 40px 40px;
+        background-position: 0 0;
+        pointer-events: none;
+        z-index: 1;
+        opacity: 0.7;
+        /* Grid rõ hơn ở vùng sáng, mờ hơn ở vùng tối */
+        mask-image: linear-gradient(
+          to bottom right,
+          rgba(0, 0, 0, 0.8) 0%,
+          rgba(0, 0, 0, 0.6) 50%,
+          rgba(0, 0, 0, 0.3) 100%
+        );
+        -webkit-mask-image: linear-gradient(
+          to bottom right,
+          rgba(0, 0, 0, 0.8) 0%,
+          rgba(0, 0, 0, 0.6) 50%,
+          rgba(0, 0, 0, 0.3) 100%
+        );
+      }
+
+      /* Glassmorphism helper */
+      .glass {
+        background: rgba(17, 22, 42, 0.7);
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+      }
+
+      /* Smooth scrolling */
+      html {
+        scroll-behavior: smooth;
+      }
+
+      /* Selection color */
+      ::selection {
+        background: rgba(34, 211, 238, 0.3);
+        color: #E5E7EB;
+      }
+
+      /* Grid Pattern Background */
+      .grid-pattern {
+        background-image: 
+          linear-gradient(rgba(34, 211, 238, 0.03) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(34, 211, 238, 0.03) 1px, transparent 1px);
+        background-size: 50px 50px;
+        position: relative;
+      }
+
+      .grid-pattern::before {
+        content: '';
+        position: absolute;
+        inset: 0;
+        background-image: radial-gradient(circle, rgba(255, 255, 255, 0.1) 1px, transparent 1px);
+        background-size: 50px 50px;
+        opacity: 0.3;
+      }
+
+      /* Network Dots Pattern */
+      .network-dots {
+        background-image: radial-gradient(circle, rgba(34, 211, 238, 0.15) 1px, transparent 1px);
+        background-size: 30px 30px;
+        background-position: 0 0, 15px 15px;
+      }
+
+      /* Glowing Border Effect */
+      .glow-border {
+        position: relative;
+      }
+
+      .glow-border::before {
+        content: '';
+        position: absolute;
+        inset: -1px;
+        border-radius: inherit;
+        padding: 1px;
+        background: linear-gradient(135deg, rgba(34, 211, 238, 0.5), rgba(124, 58, 237, 0.5));
+        -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+        -webkit-mask-composite: xor;
+        mask-composite: exclude;
+        filter: blur(8px);
+        opacity: 0.6;
+      }
+
+      /* Stronger Glow */
+      .strong-glow {
+        box-shadow: 
+          0 0 20px rgba(34, 211, 238, 0.4),
+          0 0 40px rgba(34, 211, 238, 0.2),
+          0 0 60px rgba(34, 211, 238, 0.1),
+          inset 0 0 20px rgba(34, 211, 238, 0.1);
+      }
+    </style>
+  <script type="importmap">
+{
+  "imports": {
+    "recharts": "https://aistudiocdn.com/recharts@^3.3.0",
+    "react-router-dom": "https://aistudiocdn.com/react-router-dom@^7.9.5",
+    "react-dom": "https://aistudiocdn.com/react-dom@^19.2.0",
+    "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.0/",
+    "react/": "https://aistudiocdn.com/react@^19.2.0/",
+    "react": "https://aistudiocdn.com/react@^19.2.0"
+  }
+}
+</script>
+<link rel="stylesheet" href="/index.css">
+</head>
+  <body>
+    <noscript>You need to enable JavaScript to run this app.</noscript>
+    <div id="root"></div>
+    <!-- Dependencies -->
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script type="module" src="/index.tsx"></script>
+</body>
+</html>
