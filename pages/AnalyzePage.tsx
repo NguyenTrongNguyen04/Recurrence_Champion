@@ -4,6 +4,7 @@ import Card from '../components/ui/Card';
 import Button from '../components/ui/Button';
 import Table from '../components/ui/Table';
 import Badge from '../components/ui/Badge';
+import Checkbox from '../components/ui/Checkbox';
 import { SuggestedTest } from '../types';
 import { DocumentTextIcon, PlayIcon, SparklesIcon } from '../components/icons/Icons';
 
@@ -204,12 +205,26 @@ const AnalyzePage = () => {
                                 testName = `Test Case ${index + 1}`;
                             }
                             
+                            // Extract type với normalize
+                            let testType: 'unit' | 'integration' | 'negative' | 'edge' = 'unit';
+                            const typeStr = String(tc.type || 'unit').toLowerCase();
+                            if (typeStr.includes('integration')) testType = 'integration';
+                            else if (typeStr.includes('negative') || typeStr.includes('fail')) testType = 'negative';
+                            else if (typeStr.includes('edge') || typeStr.includes('boundary')) testType = 'edge';
+                            
+                            // Extract complexity với normalize
+                            let complexity: 'S' | 'M' | 'L' = 'M';
+                            const compStr = String(tc.complexity || 'M').toUpperCase();
+                            if (compStr === 'S' || compStr === 'SIMPLE') complexity = 'S';
+                            else if (compStr === 'L' || compStr === 'LARGE' || compStr === 'COMPLEX') complexity = 'L';
+                            else complexity = 'M';
+                            
                             suggestedTests.push({
                                 id: tc.id || index + 1,
                                 name: testName,
                                 function: (tc.function || tc.targetFunction || 'unknown') as string,
-                                type: (tc.type || 'unit') as 'unit' | 'integration' | 'negative' | 'edge',
-                                complexity: (tc.complexity || 'M') as 'S' | 'M' | 'L',
+                                type: testType,
+                                complexity: complexity,
                                 selected: false
                             });
                         });
@@ -298,12 +313,26 @@ const AnalyzePage = () => {
                                 testName = testName.substring(0, 200) + '...';
                             }
                             
+                            // Extract type với normalize
+                            let testType: 'unit' | 'integration' | 'negative' | 'edge' = 'unit';
+                            const typeStr = String(tc.type || 'unit').toLowerCase();
+                            if (typeStr.includes('integration')) testType = 'integration';
+                            else if (typeStr.includes('negative') || typeStr.includes('fail')) testType = 'negative';
+                            else if (typeStr.includes('edge') || typeStr.includes('boundary')) testType = 'edge';
+                            
+                            // Extract complexity với normalize
+                            let complexity: 'S' | 'M' | 'L' = 'M';
+                            const compStr = String(tc.complexity || 'M').toUpperCase();
+                            if (compStr === 'S' || compStr === 'SIMPLE') complexity = 'S';
+                            else if (compStr === 'L' || compStr === 'LARGE' || compStr === 'COMPLEX') complexity = 'L';
+                            else complexity = 'M';
+                            
                             suggestedTests.push({
                                 id: tc.id || index + 1,
                                 name: testName,
                                 function: (tc.function || tc.targetFunction || 'unknown') as string,
-                                type: (tc.type || 'unit') as 'unit' | 'integration' | 'negative' | 'edge',
-                                complexity: (tc.complexity || 'M') as 'S' | 'M' | 'L',
+                                type: testType,
+                                complexity: complexity,
                                 selected: false
                             });
                         });
@@ -340,7 +369,7 @@ const AnalyzePage = () => {
             }
             
             // Filter out invalid test cases (có name là object hoặc JSON hoặc error analysis)
-            const validTests = suggestedTests.filter(test => {
+            const validTests: SuggestedTest[] = suggestedTests.filter((test): test is SuggestedTest => {
                 const name = String(test.name || '').trim();
                 
                 // Skip nếu name trống hoặc quá ngắn
@@ -380,7 +409,7 @@ const AnalyzePage = () => {
             });
             
             // Nếu không có valid tests, tạo default tests
-            const finalTests = validTests.length > 0 ? validTests : [{
+            const finalTests: SuggestedTest[] = validTests.length > 0 ? validTests : [{
                 id: 1,
                 name: 'Test case extracted from analysis',
                 function: 'unknown',
@@ -426,10 +455,10 @@ const AnalyzePage = () => {
                     id: 1,
                     name: 'Error parsing analysis result',
                     function: 'unknown',
-                    type: 'unit',
-                    complexity: 'M',
+                    type: 'unit' as const,
+                    complexity: 'M' as const,
                     selected: false
-                }],
+                }] as SuggestedTest[],
                 repoData: {
                     files: [],
                     detectedTech: []

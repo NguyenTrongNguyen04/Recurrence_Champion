@@ -166,12 +166,12 @@ ${analysis.conflicts.length === 0 ? 'No conflicts detected.' : analysis.conflict
 
     const blob = new Blob([markdown], { type: 'text/markdown' });
     const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
+    const a = window.document.createElement('a');
     a.href = url;
     a.download = `requirement-analysis-${document.fileName.replace(/\.[^/.]+$/, '')}.md`;
-    document.body.appendChild(a);
+    window.document.body.appendChild(a);
     a.click();
-    document.body.removeChild(a);
+    window.document.body.removeChild(a);
     URL.revokeObjectURL(url);
   };
 
@@ -181,12 +181,12 @@ ${analysis.conflicts.length === 0 ? 'No conflicts detected.' : analysis.conflict
     const json = JSON.stringify(testCases, null, 2);
     const blob = new Blob([json], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
+    const a = window.document.createElement('a');
     a.href = url;
     a.download = `test-cases-${Date.now()}.json`;
-    document.body.appendChild(a);
+    window.document.body.appendChild(a);
     a.click();
-    document.body.removeChild(a);
+    window.document.body.removeChild(a);
     URL.revokeObjectURL(url);
   };
 
