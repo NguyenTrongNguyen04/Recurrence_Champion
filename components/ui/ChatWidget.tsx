@@ -140,7 +140,7 @@ const ChatWidget: React.FC = () => {
       {isOpen && (
         <div
           ref={chatBoxRef}
-          className="absolute bottom-20 left-0 w-80 h-96 bg-surface border border-surface2 rounded-2xl shadow-2xl overflow-hidden animate-slideUp"
+          className="absolute bottom-20 left-0 w-[480px] h-[600px] bg-surface border border-surface2 rounded-2xl shadow-2xl overflow-hidden animate-slideUp"
           style={{
             animation: 'slideUp 0.3s ease-out',
           }}
@@ -160,7 +160,7 @@ const ChatWidget: React.FC = () => {
           </div>
 
           {/* Messages Area */}
-          <div className="h-64 p-4 overflow-y-auto flex flex-col gap-3">
+          <div className="h-[calc(600px-200px)] p-4 overflow-y-auto flex flex-col gap-3">
             {messages.map((message) => (
               <div
                 key={message.id}
