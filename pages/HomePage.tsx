@@ -19,9 +19,7 @@ const HomePage = () => {
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     const handleAnalyzeGithub = async (e?: React.MouseEvent) => {
-        if (e) {
-            e.stopPropagation();
-        }
+        // Không cần stopPropagation vì event đã được handle trong Button component
 
         if (!githubUrl.trim()) {
             setError('Vui lòng nhập GitHub URL');
@@ -64,9 +62,7 @@ const HomePage = () => {
     };
 
     const handleAnalyzeCode = async (e?: React.MouseEvent) => {
-        if (e) {
-            e.stopPropagation();
-        }
+        // Không cần stopPropagation vì event đã được handle trong Button component
 
         if (!codeSnippet.trim()) {
             setError('Vui lòng nhập code snippet');
@@ -109,9 +105,7 @@ const HomePage = () => {
     };
 
     const handleAnalyzeFiles = async (e?: React.MouseEvent) => {
-        if (e) {
-            e.stopPropagation();
-        }
+        // Không cần stopPropagation vì event đã được handle trong Button component
 
         if (files.length === 0) {
             setError('Vui lòng chọn ít nhất một file');

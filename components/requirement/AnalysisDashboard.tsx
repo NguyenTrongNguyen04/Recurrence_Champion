@@ -14,16 +14,16 @@ const AnalysisDashboard: React.FC<AnalysisDashboardProps> = ({ analysis }) => {
     {
       name: 'Functional (FR)',
       value: analysis.summary.functionalCount,
-      fill: '#22D3EE', // accent-cyan
+      fill: '#21A691', // accent-teal
     },
     {
       name: 'Non-Functional (NFR)',
       value: analysis.summary.nonFunctionalCount,
-      fill: '#7C3AED', // accent-violet
+      fill: '#87DF2C', // accent-lime
     },
   ];
 
-  const COLORS = ['#22D3EE', '#7C3AED'];
+  const COLORS = ['#21A691', '#87DF2C'];
 
   const frPercentage =
     analysis.summary.totalRequirements > 0
