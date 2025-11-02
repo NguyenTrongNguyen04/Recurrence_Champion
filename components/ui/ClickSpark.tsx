@@ -27,7 +27,7 @@ const ClickSpark: React.FC<ClickSparkProps> = ({ x, y, onComplete }) => {
           id: i,
           endX,
           endY,
-          delay: i * 15,
+          delay: i * 3,
           color: i % 2 === 0 ? '#21A691' : '#87DF2C',
           animationName: `sparkMove-${uniqueId}-${i}`,
         };
@@ -49,11 +49,11 @@ const ClickSpark: React.FC<ClickSparkProps> = ({ x, y, onComplete }) => {
           transform: translate(-50%, -50%) translate(0px, 0px) scale(1);
           opacity: 1;
         }
-        50% {
+        40% {
           opacity: 1;
         }
         100% {
-          transform: translate(-50%, -50%) translate(${spark.endX.toFixed(2)}px, ${spark.endY.toFixed(2)}px) scale(0.3);
+          transform: translate(-50%, -50%) translate(${spark.endX.toFixed(2)}px, ${spark.endY.toFixed(2)}px) scale(0.2);
           opacity: 0;
         }
       }
@@ -73,7 +73,7 @@ const ClickSpark: React.FC<ClickSparkProps> = ({ x, y, onComplete }) => {
   useEffect(() => {
     const timer = setTimeout(() => {
       onComplete();
-    }, 1000);
+    }, 600);
     return () => clearTimeout(timer);
   }, [onComplete]);
 
@@ -103,7 +103,7 @@ const ClickSpark: React.FC<ClickSparkProps> = ({ x, y, onComplete }) => {
             background: spark.color,
             boxShadow: `0 0 20px ${spark.color}, 0 0 40px ${spark.color}`,
             transform: 'translate(-50%, -50%)',
-            animation: `sparkMove-${sparks.uniqueId}-${spark.id} 700ms cubic-bezier(0.4, 0, 0.2, 1) forwards`,
+            animation: `sparkMove-${sparks.uniqueId}-${spark.id} 500ms cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards`,
             animationDelay: `${spark.delay}ms`,
             willChange: 'transform, opacity',
             opacity: 1,
