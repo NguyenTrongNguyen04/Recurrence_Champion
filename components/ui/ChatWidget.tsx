@@ -135,12 +135,12 @@ const ChatWidget: React.FC = () => {
   };
 
   return (
-    <div className="fixed bottom-6 right-6 z-50 flex items-center justify-center">
+    <div className="fixed bottom-16 right-8 z-50 flex items-center justify-center">
       {/* Chat Box */}
       {isOpen && (
         <div
           ref={chatBoxRef}
-          className="absolute bottom-20 right-0 w-[480px] h-[600px] bg-surface border border-surface2 rounded-2xl shadow-2xl overflow-hidden animate-slideUp"
+          className="absolute bottom-16 right-0 w-[480px] h-[600px] bg-surface border border-surface2 rounded-2xl shadow-2xl overflow-hidden animate-slideUp"
           style={{
             animation: 'slideUp 0.3s ease-out',
           }}
@@ -255,7 +255,7 @@ const ChatWidget: React.FC = () => {
       {/* Chat Icon Button */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="relative w-14 h-14 bg-gradient-g1 rounded-full shadow-lg shadow-accent-violet/30 flex items-center justify-center text-white hover:scale-110 transition-transform duration-300"
+        className="relative w-16 h-16 bg-gradient-g1 rounded-full shadow-xl shadow-accent-violet/40 flex items-center justify-center text-white hover:scale-110 transition-transform duration-300 hover:shadow-2xl hover:shadow-accent-violet/50"
         style={{
           animation: 'float 3s ease-in-out infinite',
         }}
@@ -271,9 +271,9 @@ const ChatWidget: React.FC = () => {
         {/* Icon */}
         <div className="relative z-10 transform transition-transform duration-300 hover:rotate-12">
           {!isOpen ? (
-            <ChatBubbleIcon className="w-6 h-6" />
+            <ChatBubbleIcon className="w-7 h-7" />
           ) : (
-            <XIcon className="w-6 h-6" />
+            <XIcon className="w-7 h-7" />
           )}
         </div>
 
