@@ -82,14 +82,85 @@ export const MinusIcon = createIconComponent(Minus);
 export const MaximizeIcon = createIconComponent(Maximize2);
 export const MinimizeIcon = createIconComponent(Minimize2);
 
-// TestFlowLogo giữ nguyên (custom component)
+// TestFlowLogo - Logo mới với thiết kế công nghệ
 export const TestFlowLogo = () => {
   return (
-    <div className="flex items-center space-x-2">
-      <div className="w-8 h-8 bg-gradient-g1 rounded-lg flex items-center justify-center">
-        <BeakerIcon className="w-5 h-5 text-white" />
+    <div className="flex items-center space-x-3">
+      {/* Hexagon với logo bên trong */}
+      <div className="relative flex-shrink-0">
+        <svg width="56" height="56" viewBox="0 0 48 48" className="drop-shadow-lg">
+          {/* Hình lục giác nền với hiệu ứng 3D */}
+          <defs>
+            <linearGradient id="hexagonGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stopColor="#1E3230" />
+              <stop offset="50%" stopColor="#27403E" />
+              <stop offset="100%" stopColor="#1A2928" />
+            </linearGradient>
+            <linearGradient id="circuitGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+              <stop offset="0%" stopColor="#21A691" />
+              <stop offset="100%" stopColor="#87DF2C" />
+            </linearGradient>
+            <filter id="glow">
+              <feGaussianBlur stdDeviation="2" result="coloredBlur"/>
+              <feMerge>
+                <feMergeNode in="coloredBlur"/>
+                <feMergeNode in="SourceGraphic"/>
+              </feMerge>
+            </filter>
+          </defs>
+          
+          {/* Hình lục giác */}
+          <path
+            d="M24 4 L36 10 L40 22 L36 34 L24 40 L12 34 L8 22 L12 10 Z"
+            fill="url(#hexagonGradient)"
+            stroke="#1E3230"
+            strokeWidth="0.5"
+            className="rounded-lg"
+          />
+          
+          {/* Vòng tròn mạch điện tử */}
+          <circle cx="24" cy="20" r="14" fill="none" stroke="url(#circuitGradient)" strokeWidth="1.5" opacity="0.8" filter="url(#glow)" />
+          
+          {/* Các đường mạch điện tử trong vòng tròn */}
+          <circle cx="24" cy="12" r="1.5" fill="url(#circuitGradient)" />
+          <circle cx="32" cy="18" r="1.5" fill="url(#circuitGradient)" />
+          <circle cx="24" cy="28" r="1.5" fill="url(#circuitGradient)" />
+          <circle cx="16" cy="18" r="1.5" fill="url(#circuitGradient)" />
+          <path d="M24 12 L32 18 M24 28 L32 18 M24 28 L16 18 M24 12 L16 18" stroke="url(#circuitGradient)" strokeWidth="1" opacity="0.6" />
+          
+          {/* Kính lúp */}
+          <g transform="translate(24, 20)">
+            {/* Thấu kính */}
+            <circle cx="0" cy="0" r="8" fill="none" stroke="url(#circuitGradient)" strokeWidth="1.5" opacity="0.7" />
+            
+            {/* Biểu đồ cột bên trong kính lúp */}
+            <rect x="-4" y="2" width="1.5" height="3" fill="url(#circuitGradient)" opacity="0.9" />
+            <rect x="-1.5" y="1" width="1.5" height="4" fill="url(#circuitGradient)" opacity="0.9" />
+            <rect x="1" y="0.5" width="1.5" height="4.5" fill="url(#circuitGradient)" opacity="0.9" />
+            
+            {/* Đường ngang */}
+            <line x1="-3" y1="-1" x2="3" y2="-1" stroke="url(#circuitGradient)" strokeWidth="0.8" opacity="0.7" />
+            <line x1="-2.5" y1="-2.5" x2="2.5" y2="-2.5" stroke="url(#circuitGradient)" strokeWidth="0.8" opacity="0.7" />
+            
+            {/* Tay cầm kính lúp */}
+            <path
+              d="M 5 -5 L 9 -7 L 9 -3"
+              fill="none"
+              stroke="url(#circuitGradient)"
+              strokeWidth="2"
+              strokeLinecap="round"
+              opacity="0.8"
+            />
+          </g>
+        </svg>
       </div>
-      <span className="text-xl font-bold text-primary">Test Studio AI</span>
+      
+      {/* Text */}
+      <div className="flex items-center">
+        <span className="text-2xl font-extrabold bg-gradient-to-r from-[#21A691] to-[#87DF2C] bg-clip-text text-transparent leading-none tracking-tight whitespace-nowrap">
+          Test Studio
+        </span>
+      </div>
     </div>
   );
 };

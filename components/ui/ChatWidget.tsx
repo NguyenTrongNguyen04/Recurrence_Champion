@@ -135,12 +135,12 @@ const ChatWidget: React.FC = () => {
   };
 
   return (
-    <div className="fixed bottom-6 left-6 z-50">
+    <div className="fixed bottom-6 right-6 z-50 flex items-center justify-center">
       {/* Chat Box */}
       {isOpen && (
         <div
           ref={chatBoxRef}
-          className="absolute bottom-20 left-0 w-[480px] h-[600px] bg-surface border border-surface2 rounded-2xl shadow-2xl overflow-hidden animate-slideUp"
+          className="absolute bottom-20 right-0 w-[480px] h-[600px] bg-surface border border-surface2 rounded-2xl shadow-2xl overflow-hidden animate-slideUp"
           style={{
             animation: 'slideUp 0.3s ease-out',
           }}
@@ -277,9 +277,9 @@ const ChatWidget: React.FC = () => {
           )}
         </div>
 
-        {/* Notification dot */}
+        {/* Notification dot - cân đối vị trí */}
         <div 
-          className="absolute top-0 right-0 w-4 h-4 bg-status-danger rounded-full border-2 border-surface"
+          className="absolute top-1 right-1 w-3 h-3 bg-status-danger rounded-full border-2 border-surface"
           style={{
             animation: 'bounce 1s infinite',
           }}

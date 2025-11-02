@@ -4,6 +4,7 @@ interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: 'primary' | 'secondary' | 'ghost' | 'action';
   children: React.ReactNode;
   icon?: React.ReactNode;
+  enableSpark?: boolean; // Không dùng nữa vì đã có global spark handler
 }
 
 const Button: React.FC<ButtonProps> = ({ 
@@ -12,9 +13,11 @@ const Button: React.FC<ButtonProps> = ({
   className, 
   icon,
   disabled,
+  onClick,
   ...props 
 }) => {
-  const baseClasses = 'px-6 py-3 font-semibold rounded-xl transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-background focus:ring-accent-violet disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2';
+
+  const baseClasses = 'px-6 py-3 font-semibold rounded-xl transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-background focus:ring-accent-violet disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 relative overflow-visible';
 
   const variantClasses = {
     primary: 'text-white bg-gradient-g1 hover:opacity-90 hover:scale-[1.02] active:scale-[0.98] shadow-lg shadow-accent-violet/20 hover:shadow-xl hover:shadow-accent-violet/30',
@@ -27,6 +30,7 @@ const Button: React.FC<ButtonProps> = ({
     <button 
       className={`${baseClasses} ${variantClasses[variant]} ${className} ${disabled ? 'hover:scale-100' : ''}`} 
       disabled={disabled}
+      onClick={onClick}
       {...props}
     >
       {icon && (
