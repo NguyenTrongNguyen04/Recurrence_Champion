@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { ThemeProvider } from './contexts/ThemeContext';
@@ -11,6 +11,7 @@ import DashboardPage from './pages/DashboardPage';
 import HistoryPage from './pages/HistoryPage';
 import SettingsPage from './pages/SettingsPage';
 import RequirementPage from './pages/RequirementPage';
+import ClickSpark from './components/ui/ClickSpark';
 
 function AppRoutes() {
   const { currentUser, loading } = useAuth();
@@ -49,11 +50,36 @@ function AppRoutes() {
 }
 
 function App() {
+  const [spark, setSpark] = useState<{ x: number; y: number } | null>(null);
+
+  useEffect(() => {
+    const handleClick = (e: MouseEvent) => {
+      // Tạo spark cho mọi click trên toàn bộ ứng dụng
+      setSpark({
+        x: e.clientX,
+        y: e.clientY,
+      });
+    };
+
+    document.addEventListener('click', handleClick, true);
+    
+    return () => {
+      document.removeEventListener('click', handleClick, true);
+    };
+  }, []);
+
   return (
     <ThemeProvider>
       <AuthProvider>
         <HashRouter>
           <AppRoutes />
+          {spark && (
+            <ClickSpark
+              x={spark.x}
+              y={spark.y}
+              onComplete={() => setSpark(null)}
+            />
+          )}
         </HashRouter>
       </AuthProvider>
     </ThemeProvider>
